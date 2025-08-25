@@ -696,6 +696,18 @@
         };
 
         // --- Utility Functions ---
+        const normalizePhoneNumberForWhatsApp = (phone) => {
+            if (!phone || typeof phone !== 'string') return '';
+            // Remove all non-digit characters
+            let cleaned = phone.replace(/\D/g, '');
+            // If the number starts with 0, assume it's a Malaysian number and replace with 60
+            if (cleaned.startsWith('0')) {
+                cleaned = '60' + cleaned.substring(1);
+            }
+            // If it doesn't start with 0, it's assumed to be in the correct format already (e.g., 65... for Singapore)
+            return cleaned;
+        };
+
         const goBack = () => {
             if (routeHistory.length > 0) {
                 const renderPrevious = routeHistory.pop();
@@ -853,7 +865,6 @@
                 vvips = snap.docs.map(d => ({ id: d.id, ...d.data() }));
             });
         };
-
         // --- PDF Generation Function ---
         const generatePDFReport = async (button) => {
             button.disabled = true;
@@ -1434,7 +1445,7 @@
                     </div>
                     <div>
                         <label class="text-sm font-medium text-slate-300">Your Contact Number</label>
-                        <input type="tel" name="requesterContact" placeholder="e.g., 60123456789" class="mobile-input mt-1 w-full p-3 bg-slate-900/70 border border-slate-700 rounded-lg text-white" required />
+                        <input type="tel" name="requesterContact" placeholder="e.g., 0123456789 or 60123456789" class="mobile-input mt-1 w-full p-3 bg-slate-900/70 border border-slate-700 rounded-lg text-white" required />
                     </div>
                     
                     <div>
@@ -1723,7 +1734,6 @@
             }
             listContainer.innerHTML = listHTML;
         };
-
         const renderUserDashboard = (user, vehicleFilter = null) => {
             document.body.className = 'bg-gray-100 dark:bg-gray-900';
             const currentUserID = sessionStorage.getItem('currentUserID');
@@ -2040,7 +2050,7 @@
                 const updateInfo = formatUpdateString(c);
                 const timeSlotText = c.timeSlot ? c.timeSlot.replace('-', ' to ').replace('onwards', ' onwards') : 'N/A';
                 const contact = c.ownerContact || c.requesterContact || null;
-                const whatsappLink = contact ? `https://wa.me/${contact.replace(/[^0-9]/g, '')}?text=${encodeURIComponent(`Regarding your vehicle clearance for ${c.vehicleNumber}`)}` : '#';
+                const whatsappLink = contact ? `https://wa.me/${normalizePhoneNumberForWhatsApp(contact)}?text=${encodeURIComponent(`Regarding your vehicle clearance for ${c.vehicleNumber}`)}` : '#';
 
                 return `
             <details class="mobile-details bg-white dark:bg-gray-800 rounded-lg shadow-md overflow-hidden group animate-fade-in border border-gray-200 dark:border-gray-700">
@@ -2176,7 +2186,6 @@
             </div>
         </div>`;
         };
-        
         const renderWhatsAppModal = (request) => {
             const contact = request.requesterContact;
             if (!contact) {
@@ -2258,7 +2267,7 @@
             form.onsubmit = (e) => {
                 e.preventDefault();
                 const data = getFormObj(form);
-                const phone = contact.replace(/[^0-9]/g, '');
+                const phone = normalizePhoneNumberForWhatsApp(contact);
                 const message = encodeURIComponent(data.customMessage);
                 window.open(`https://wa.me/${phone}?text=${message}`, '_blank');
                 modalWrapper.remove();
@@ -2393,7 +2402,7 @@
                      <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <div>
                             <label class="text-sm font-medium text-gray-700 dark:text-gray-300">Contact Number</label>
-                            <input name="ownerContact" value="${edit?.ownerContact || ''}" type="tel" class="mobile-input mt-1 w-full p-3 bg-gray-50 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-900 dark:text-white" placeholder="e.g. 60123456789" />
+                            <input name="ownerContact" value="${edit?.ownerContact || ''}" type="tel" class="mobile-input mt-1 w-full p-3 bg-gray-50 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-900 dark:text-white" placeholder="e.g. 0123456789" />
                         </div>
                         <div>
                             <label class="text-sm font-medium text-gray-700 dark:text-gray-300">Email Address</label>
@@ -2461,7 +2470,6 @@
             </div>
         </div>`;
         };
-
         const renderConfirmationModal = (title, message, onConfirm) => {
             const modalContainer = document.getElementById('modal-container');
             modalContainer.innerHTML = `
@@ -3162,7 +3170,7 @@
 
                         if (isWhatsApp) {
                             if (savedPayload.ownerContact) {
-                                const phone = savedPayload.ownerContact.replace(/[^0-9]/g, '');
+                                const phone = normalizePhoneNumberForWhatsApp(savedPayload.ownerContact);
                                 const message = encodeURIComponent(`Hi ${savedPayload.ownerName}, your vehicle clearance for [${savedPayload.vehicleNumber}] has been approved. It is valid from ${formatDate(savedPayload.entryDate)} to ${formatDate(savedPayload.expiryDate)}.`);
                                 window.open(`https://wa.me/${phone}?text=${message}`, '_blank');
                             } else {
