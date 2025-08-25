@@ -913,12 +913,13 @@
                     const expiry = c.expiryDate.toDate();
                     expiry.setHours(23, 59, 59, 999);
                     const status = now <= expiry ? 'ACTIVE' : 'EXPIRED';
-
+                    const timeSlotText = c.timeSlot ? c.timeSlot.replace('-', ' to ') : 'N/A';
                     const escortInfo = getEscortInfo(c);
 
                     reportData.push([
                         formatVehicleNumber(c.vehicleNumber || 'N/A'),
                         c.location || 'N/A',
+                        timeSlotText,
                         escortInfo,
                         formatDate(c.expiryDate),
                         status
@@ -939,10 +940,12 @@
                 recentRequests.forEach(r => {
                     if (!processedVehicleNumbers.has(r.vehicleNumber)) {
                         const requestEscortInfo = getEscortInfo(r);
+                        const timeSlotText = r.timeSlot ? r.timeSlot.replace('-', ' to ') : 'N/A';
 
                         reportData.push([
                             formatVehicleNumber(r.vehicleNumber || 'N/A'),
                             r.location || 'N/A',
+                            timeSlotText,
                             requestEscortInfo,
                             formatDate(r.expiryDate),
                             r.status?.toUpperCase() || 'PENDING'
@@ -968,7 +971,7 @@
                 } else {
                     doc.autoTable({
                         head: [
-                            ['Vehicle No.', 'Location', 'Escort Required', 'Expiry Date', 'Status']
+                            ['Vehicle No.', 'Location', 'Entry Time', 'Escort Required', 'Expiry Date', 'Status']
                         ],
                         body: reportData,
                         startY: 45,
@@ -981,7 +984,7 @@
                         },
                         styles: {
                             fontSize: 8,
-                            cellPadding: 3,
+                            cellPadding: 2.5,
                             halign: 'center',
                             valign: 'middle',
                             overflow: 'linebreak',
@@ -990,15 +993,17 @@
                         },
                         columnStyles: {
                             0: { halign: 'left', fontStyle: 'bold', cellWidth: 25 },
-                            1: { halign: 'left', cellWidth: 30 },
-                            2: { halign: 'left', cellWidth: 35, valign: 'top' },
-                            3: { halign: 'center', cellWidth: 25 },
-                            4: { halign: 'center', fontStyle: 'bold', cellWidth: 20 }
+                            1: { halign: 'left', cellWidth: 25 },
+                            2: { halign: 'center', cellWidth: 25 },
+                            3: { halign: 'left', cellWidth: 35, valign: 'top' },
+                            4: { halign: 'center', cellWidth: 25 },
+                            5: { halign: 'center', fontStyle: 'bold', cellWidth: 20 }
                         },
                         didParseCell: (data) => {
                             if (data.section !== 'body') return;
 
-                            if (data.column.index === 4) {
+                            // Status column styling
+                            if (data.column.index === 5) {
                                 const status = data.cell.raw;
                                 switch (status) {
                                     case 'ACTIVE':
@@ -1016,6 +1021,7 @@
                                 }
                             }
 
+                            // Location column styling
                             if (data.column.index === 1) {
                                 if (data.cell.raw === 'Foyer Parking') {
                                     data.cell.styles.fontStyle = 'bold';
@@ -1024,9 +1030,9 @@
                                 }
                             }
 
-                            if (data.column.index === 2) {
+                            // Escort column styling
+                            if (data.column.index === 3) {
                                 const text = data.cell.raw.toString();
-
                                 if (text.includes('\n')) {
                                     data.cell.styles.fontSize = 7;
                                     data.cell.styles.cellPadding = 2;
@@ -1036,7 +1042,6 @@
                                         data.cell.styles.fontStyle = 'bold';
                                         data.cell.styles.textColor = [22, 163, 74];
                                     }
-
                                 } else {
                                     data.cell.styles.fontSize = 8;
                                     if (text === 'Yes') {
@@ -1061,8 +1066,8 @@
                 doc.setFontSize(10);
                 doc.setFont(undefined, 'normal');
                 doc.setTextColor(100);
-                const activeClearances = reportData.filter(row => row[4] === 'ACTIVE' || row[4] === 'APPROVED').length;
-                const pendingRequests = reportData.filter(row => row[4] === 'PENDING').length;
+                const activeClearances = reportData.filter(row => row[5] === 'ACTIVE' || row[5] === 'APPROVED').length;
+                const pendingRequests = reportData.filter(row => row[5] === 'PENDING').length;
                 const totalRecords = reportData.length;
                 doc.text(`Total Records: ${totalRecords}`, 14, finalY + 8);
                 doc.text(`Active Clearances: ${activeClearances}`, 14, finalY + 16);
@@ -1999,9 +2004,7 @@
                 return;
             }
 
-            list.innerHTML = clearanceRequests.map(r => {
-                const whatsappLink = r.requesterContact ? `https://wa.me/${r.requesterContact.replace(/[^0-9]/g, '')}?text=${encodeURIComponent(`Regarding your vehicle clearance request for ${r.vehicleNumber}`)}` : '#';
-                return `
+            list.innerHTML = clearanceRequests.map(r => `
             <div class="bg-white dark:bg-gray-800 rounded-2xl shadow-lg p-5 animate-fade-in border border-transparent hover:border-blue-500 transition-colors">
                 <div class="flex flex-col sm:flex-row justify-between items-start gap-4">
                     <div>
@@ -2009,17 +2012,11 @@
                         <p class="font-semibold text-gray-800 dark:text-gray-100">${r.requesterName} (${r.requesterContact || 'No Contact'})</p>
                         <p class="text-sm text-gray-500 dark:text-gray-400 mt-1">${r.vehicleType || '-'} • Requested on ${formatDate(r.createdAt)}</p>
                     </div>
-                    <div class="flex items-center gap-2 w-full sm:w-auto">
-                        <a href="${whatsappLink}" target="_blank" class="flex-shrink-0 p-2 text-green-500 bg-green-100 dark:bg-gray-700 rounded-full hover:bg-green-200 dark:hover:bg-gray-600 ${!r.requesterContact ? 'opacity-50 cursor-not-allowed' : ''}" title="WhatsApp">
-                          ${icons.whatsapp}
-                        </a>
-                        <button class="review-btn flex-1 flex items-center justify-center gap-2 px-4 py-2 bg-yellow-500 text-white rounded-lg hover:bg-yellow-600 transform hover:scale-105 transition-transform mobile-button" data-id="${r.id}">
-                            Review
-                        </button>
-                    </div>
+                    <button class="review-btn w-full sm:w-auto flex items-center justify-center gap-2 px-4 py-2 bg-yellow-500 text-white rounded-lg hover:bg-yellow-600 transform hover:scale-105 transition-transform mobile-button" data-id="${r.id}">
+                        Review Request
+                    </button>
                 </div>
-            </div>`
-            }).join("");
+            </div>`).join("");
         };
 
         const renderClearancesList = () => {
@@ -2179,6 +2176,95 @@
             </div>
         </div>`;
         };
+        
+        const renderWhatsAppModal = (request) => {
+            const contact = request.requesterContact;
+            if (!contact) {
+                showNotification("No contact number available for this request.", "error");
+                return;
+            }
+
+            const modalWrapper = document.createElement('div');
+            modalWrapper.id = 'whatsapp-modal-wrapper';
+
+            modalWrapper.innerHTML = `
+            <div id="whatsapp-modal-backdrop" class="mobile-modal bg-black bg-opacity-60 z-[60]">
+                <div class="mobile-modal-content bg-white dark:bg-gray-800 rounded-2xl shadow-2xl p-6 w-full max-w-md relative animate-fade-in">
+                    <h2 class="text-lg font-bold text-gray-800 dark:text-gray-100 mb-4">Send WhatsApp Message</h2>
+                    <form id="whatsapp-form">
+                        <div class="space-y-4">
+                            <div>
+                                <label class="text-sm font-medium text-gray-700 dark:text-gray-300">Select Message Type</label>
+                                <div class="mt-2 grid grid-cols-1 sm:grid-cols-3 gap-2">
+                                    <label class="flex items-center p-3 bg-gray-100 dark:bg-gray-700 rounded-lg cursor-pointer">
+                                        <input type="radio" name="messageType" value="approved" class="h-4 w-4 text-blue-600 border-gray-300">
+                                        <span class="ml-3 text-sm text-gray-800 dark:text-gray-200">Approved</span>
+                                    </label>
+                                    <label class="flex items-center p-3 bg-gray-100 dark:bg-gray-700 rounded-lg cursor-pointer">
+                                        <input type="radio" name="messageType" value="rejected" class="h-4 w-4 text-blue-600 border-gray-300">
+                                        <span class="ml-3 text-sm text-gray-800 dark:text-gray-200">Rejected</span>
+                                    </label>
+                                    <label class="flex items-center p-3 bg-gray-100 dark:bg-gray-700 rounded-lg cursor-pointer">
+                                        <input type="radio" name="messageType" value="query" class="h-4 w-4 text-blue-600 border-gray-300" checked>
+                                        <span class="ml-3 text-sm text-gray-800 dark:text-gray-200">Query</span>
+                                    </label>
+                                </div>
+                            </div>
+                            <div id="whatsapp-message-content">
+                                <label for="customMessage" class="text-sm font-medium text-gray-700 dark:text-gray-300">Your Message</label>
+                                <textarea id="customMessage" name="customMessage" rows="4" class="mobile-input mt-1 w-full p-3 bg-gray-50 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-900 dark:text-white" placeholder="Type your question here..."></textarea>
+                            </div>
+                        </div>
+                        <div class="mt-6 flex flex-col sm:flex-row justify-end space-y-2 sm:space-y-0 sm:space-x-3">
+                            <button type="button" id="cancel-whatsapp-btn" class="px-4 py-2 rounded-lg bg-gray-200 dark:bg-gray-600 text-gray-800 dark:text-gray-200 hover:bg-gray-300 dark:hover:bg-gray-500 mobile-button">Cancel</button>
+                            <button type="submit" class="px-4 py-2 rounded-lg bg-green-600 text-white hover:bg-green-700 mobile-button flex items-center justify-center gap-2">
+                                ${icons.whatsapp} Send Message
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>`;
+            
+            document.getElementById('modal-container').appendChild(modalWrapper);
+
+            const form = modalWrapper.querySelector('#whatsapp-form');
+            const textarea = modalWrapper.querySelector('#customMessage');
+            
+            const updateMessage = (type) => {
+                 switch(type) {
+                    case 'approved':
+                        textarea.value = `Hi ${request.requesterName}, your vehicle clearance request for [${request.vehicleNumber}] has been APPROVED. It is valid from ${formatDate(request.entryDate.toDate())} to ${formatDate(request.expiryDate.toDate())}.`;
+                        break;
+                    case 'rejected':
+                        textarea.value = `Hi ${request.requesterName}, your vehicle clearance request for [${request.vehicleNumber}] has been REJECTED. Please check your email for the reason or contact us for more details.`;
+                        break;
+                    case 'query':
+                        textarea.value = `Hi ${request.requesterName}, regarding your vehicle clearance request for [${request.vehicleNumber}], `;
+                        break;
+                }
+            };
+            
+            form.elements.messageType.forEach(radio => {
+                radio.addEventListener('change', (e) => updateMessage(e.target.value));
+            });
+            
+            updateMessage('query'); // Set initial message
+
+            modalWrapper.querySelector('#cancel-whatsapp-btn').onclick = () => modalWrapper.remove();
+            modalWrapper.querySelector('#whatsapp-modal-backdrop').onclick = (e) => {
+                if (e.target.id === 'whatsapp-modal-backdrop') modalWrapper.remove();
+            };
+            
+            form.onsubmit = (e) => {
+                e.preventDefault();
+                const data = getFormObj(form);
+                const phone = contact.replace(/[^0-9]/g, '');
+                const message = encodeURIComponent(data.customMessage);
+                window.open(`https://wa.me/${phone}?text=${message}`, '_blank');
+                modalWrapper.remove();
+            };
+        };
+
 
         const renderReviewModal = (request) => {
             const modalContainer = document.getElementById("modal-container");
@@ -2265,9 +2351,13 @@
                         <input type="checkbox" name="escortRequired" class="h-5 w-5 rounded text-blue-600" ${request.escortRequired ? 'checked' : ''}/>
                         <label class="ml-2 text-gray-700 dark:text-gray-300">Escort Required</label>
                     </div>
-                    <div class="flex flex-col sm:flex-row justify-end space-y-2 sm:space-y-0 sm:space-x-3 pt-4 border-t border-gray-200 dark:border-gray-700">
+                    <div class="flex flex-col sm:flex-row justify-end items-center space-y-2 sm:space-y-0 sm:space-x-3 pt-4 border-t border-gray-200 dark:border-gray-700">
+                         <button type="button" class="whatsapp-query-btn px-4 py-2 rounded-lg bg-green-600 text-white hover:bg-green-700 mobile-button flex-1 sm:flex-none flex items-center justify-center gap-2" data-id="${request.id}">
+                            ${icons.whatsapp} <span>WhatsApp</span>
+                        </button>
+                        <div class="flex-grow"></div>
                         <button type="button" class="reject-request-btn px-6 py-2 rounded-lg bg-red-600 text-white hover:bg-red-700 mobile-button" data-id="${request.id}">Reject</button>
-                        <button type="button" class="approve-request-btn px-6 py-2 rounded-lg bg-green-600 text-white hover:bg-green-700 mobile-button" data-id="${request.id}">Approve</button>
+                        <button type="button" class="approve-request-btn px-6 py-2 rounded-lg bg-blue-600 text-white hover:bg-blue-700 mobile-button" data-id="${request.id}">Approve</button>
                     </div>
                 </form>
             </div>
@@ -2722,6 +2812,16 @@
             }
 
             try {
+                 if (button.classList.contains("whatsapp-query-btn")) {
+                    e.preventDefault();
+                    const request = clearanceRequests.find(r => r.id === button.dataset.id);
+                    if (request) {
+                        renderWhatsAppModal(request);
+                    } else {
+                        showNotification("Could not find request details.", "error");
+                    }
+                    return;
+                }
                 if (button.id === "clear-tracking-btn") {
                     e.preventDefault();
                     renderLandingPage({ vehicleNumber: "", trackingResultHTML: "" });
