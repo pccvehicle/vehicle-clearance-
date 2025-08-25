@@ -2453,8 +2453,9 @@
                         <label class="ml-2 text-gray-700 dark:text-gray-300">Escort Required</label>
                     </div>
                     <div class="flex flex-col sm:flex-row justify-end space-y-2 sm:space-y-0 sm:space-x-3 pt-4">
-                        <button type="button" id="cancel-modal-btn" class="px-6 py-2 rounded-lg bg-gray-200 dark:bg-gray-600 text-gray-800 dark:text-gray-200 hover:bg-gray-300 dark:hover:bg-gray-500 mobile-button">Cancel</button>
-                        <button type="button" class="save-clearance-btn px-6 py-2 rounded-lg bg-blue-600 text-white hover:bg-blue-700 mobile-button" data-id="${edit?.id || ''}">${isEdit ? 'Update' : 'Save'}</button>
+                        <button type="button" id="cancel-modal-btn" class="px-4 py-2 rounded-lg bg-gray-200 dark:bg-gray-600 text-gray-800 dark:text-gray-200 hover:bg-gray-300 dark:hover:bg-gray-500 mobile-button">Cancel</button>
+                        <button type="button" class="save-clearance-btn px-4 py-2 rounded-lg bg-blue-600 text-white hover:bg-blue-700 mobile-button" data-id="${edit?.id || ''}">${isEdit ? 'Update' : 'Save'}</button>
+                        ${!isEdit ? `<button type="button" class="save-and-whatsapp-btn px-4 py-2 rounded-lg bg-green-600 text-white hover:bg-green-700 mobile-button flex items-center justify-center gap-2">${icons.whatsapp} Save & Send</button>` : ''}
                     </div>
                 </form>
             </div>
@@ -2785,6 +2786,76 @@
             }
             textarea.dispatchEvent(new Event('input', { bubbles: true }));
         };
+        
+        const saveClearanceData = async (form, editingId = null) => {
+            const data = getFormObj(form);
+            const entryDate = parseLocalDate(data.entryDate);
+            const expiryDate = parseLocalDate(data.expiryDate);
+
+            if (!entryDate || !expiryDate || !form.checkValidity()) {
+                form.reportValidity();
+                throw new Error("Please fill all required fields with valid dates.");
+            }
+            if (!currentAdminProfile) {
+                throw new Error("Admin profile not loaded. Cannot save.");
+            }
+
+            const currentTimestamp = Timestamp.now();
+            const payload = {
+                ownerName: data.ownerName,
+                ownerContact: data.ownerContact,
+                ownerEmail: data.ownerEmail,
+                vehicleNumber: data.vehicleNumber.toUpperCase(),
+                vehicleType: data.vehicleType,
+                location: data.location === "Other" ? data.customLocation : data.location,
+                timeSlot: data.timeSlot,
+                entryDate: Timestamp.fromDate(entryDate),
+                expiryDate: Timestamp.fromDate(expiryDate),
+                escortRequired: !!data.escortRequired,
+                notes: data.notes || ""
+            };
+
+            if (editingId) {
+                payload.lastUpdatedByUsername = currentAdminProfile.username;
+                payload.lastUpdatedByDesignation = currentAdminProfile.designation;
+                payload.lastUpdatedByUid = auth.currentUser?.uid;
+                payload.lastUpdatedAt = currentTimestamp;
+                const existingDoc = await getDoc(doc(db, "vehicleClearances", editingId));
+                if (existingDoc.exists()) {
+                    const existingData = existingDoc.data();
+                    payload.approvalHistory = existingData.approvalHistory || [];
+                    payload.approvalHistory.push({
+                        action: 'updated',
+                        byUsername: currentAdminProfile.username,
+                        byDesignation: currentAdminProfile.designation,
+                        byUid: auth.currentUser?.uid,
+                        timestamp: currentTimestamp,
+                        notes: 'Clearance details updated'
+                    });
+                }
+                await updateDoc(doc(db, "vehicleClearances", editingId), payload);
+                showNotification(`Clearance updated by ${currentAdminProfile.username}`);
+            } else {
+                payload.createdAt = currentTimestamp;
+                payload.createdByUid = auth.currentUser?.uid;
+                payload.approvedByUsername = currentAdminProfile.username;
+                payload.approvedByDesignation = currentAdminProfile.designation;
+                payload.approvedByUid = auth.currentUser?.uid;
+                payload.approvedAt = currentTimestamp;
+                payload.approvalHistory = [{
+                    action: 'created',
+                    byUsername: currentAdminProfile.username,
+                    byDesignation: currentAdminProfile.designation,
+                    byUid: auth.currentUser?.uid,
+                    timestamp: currentTimestamp,
+                    notes: 'Clearance created directly by admin (Fast Track)'
+                }];
+                await addDoc(collection(db, "vehicleClearances"), payload);
+                showNotification(`Clearance created by ${currentAdminProfile.username}`);
+            }
+            return payload;
+        };
+
 
         // --- Global Event Listener ---
         document.body.addEventListener("click", async (e) => {
@@ -3077,109 +3148,52 @@
                     return;
                 }
 
-                if (button.classList.contains("save-clearance-btn")) {
+                if (button.classList.contains("save-clearance-btn") || button.classList.contains("save-and-whatsapp-btn")) {
                     e.preventDefault();
                     const modal = button.closest('#form-modal-backdrop');
                     const form = modal?.querySelector('#clearance-form');
                     if (!form) { showNotification("Critical error: Cannot find clearance form.", "error"); return; }
                     button.disabled = true;
+                    const isWhatsApp = button.classList.contains("save-and-whatsapp-btn");
 
                     try {
-                        const data = getFormObj(form);
-                        const entryDate = parseLocalDate(data.entryDate);
-                        const expiryDate = parseLocalDate(data.expiryDate);
-
-                        if (!entryDate || !expiryDate || !form.checkValidity()) {
-                            form.reportValidity();
-                            showNotification("Please fill all required fields with valid dates.", "error");
-                            button.disabled = false;
-                            return;
-                        }
-                        if (!currentAdminProfile) {
-                            showNotification("Error: Admin profile not loaded. Cannot save.", "error");
-                            button.disabled = false;
-                            return;
-                        }
-
-                        const currentTimestamp = Timestamp.now();
-                        const payload = {
-                            ownerName: data.ownerName,
-                            ownerContact: data.ownerContact,
-                            ownerEmail: data.ownerEmail,
-                            vehicleNumber: data.vehicleNumber.toUpperCase(),
-                            vehicleType: data.vehicleType,
-                            location: data.location === "Other" ? data.customLocation : data.location,
-                            timeSlot: data.timeSlot,
-                            entryDate: Timestamp.fromDate(entryDate),
-                            expiryDate: Timestamp.fromDate(expiryDate),
-                            escortRequired: !!data.escortRequired,
-                            notes: data.notes || ""
-                        };
-
                         const editingId = button.dataset.id;
-                        if (editingId) {
-                            payload.lastUpdatedByUsername = currentAdminProfile.username;
-                            payload.lastUpdatedByDesignation = currentAdminProfile.designation;
-                            payload.lastUpdatedByUid = auth.currentUser?.uid;
-                            payload.lastUpdatedAt = currentTimestamp;
-                            const existingDoc = await getDoc(doc(db, "vehicleClearances", editingId));
-                            if (existingDoc.exists()) {
-                                const existingData = existingDoc.data();
-                                payload.approvalHistory = existingData.approvalHistory || [];
-                                payload.approvalHistory.push({
-                                    action: 'updated',
-                                    byUsername: currentAdminProfile.username,
-                                    byDesignation: currentAdminProfile.designation,
-                                    byUid: auth.currentUser?.uid,
-                                    timestamp: currentTimestamp,
-                                    notes: 'Clearance details updated'
-                                });
-                            }
-                            await updateDoc(doc(db, "vehicleClearances", editingId), payload);
-                            showNotification(`Clearance updated by ${currentAdminProfile.username} (${currentAdminProfile.designation})`);
-                        } else {
-                            payload.createdAt = currentTimestamp;
-                            payload.createdByUid = auth.currentUser?.uid;
-                            payload.approvedByUsername = currentAdminProfile.username;
-                            payload.approvedByDesignation = currentAdminProfile.designation;
-                            payload.approvedByUid = auth.currentUser?.uid;
-                            payload.approvedAt = currentTimestamp;
-                            payload.approvalHistory = [{
-                                action: 'created',
-                                byUsername: currentAdminProfile.username,
-                                byDesignation: currentAdminProfile.designation,
-                                byUid: auth.currentUser?.uid,
-                                timestamp: currentTimestamp,
-                                notes: 'Clearance created directly by admin (Fast Track)'
-                            }];
-                            await addDoc(collection(db, "vehicleClearances"), payload);
-                            showNotification(`Clearance created by ${currentAdminProfile.username} (${currentAdminProfile.designation})`);
+                        const savedPayload = await saveClearanceData(form, editingId);
 
-                            // --- Start Email Logic for Fast Track ---
-                            if (payload.ownerEmail) {
-                                let emailBody;
-                                try {
-                                    showNotification("Generating clearance email...", "info");
-                                    const emailPrompt = `Generate a professional and friendly HTML email. The user's vehicle has been given clearance (Fast Track).
-                                - Recipient's Name: ${payload.ownerName}
-                                - Vehicle Number: ${payload.vehicleNumber}
-                                - Approved Location: ${payload.location}
-                                - Validity Period: From ${formatDate(payload.entryDate)} to ${formatDate(payload.expiryDate)}.
+                        if (isWhatsApp) {
+                            if (savedPayload.ownerContact) {
+                                const phone = savedPayload.ownerContact.replace(/[^0-9]/g, '');
+                                const message = encodeURIComponent(`Hi ${savedPayload.ownerName}, your vehicle clearance for [${savedPayload.vehicleNumber}] has been approved. It is valid from ${formatDate(savedPayload.entryDate)} to ${formatDate(savedPayload.expiryDate)}.`);
+                                window.open(`https://wa.me/${phone}?text=${message}`, '_blank');
+                            } else {
+                                showNotification("No contact number to send WhatsApp message.", "error");
+                            }
+                        }
+
+                        if (savedPayload.ownerEmail && !editingId) {
+                            let emailBody;
+                            try {
+                                showNotification("Generating clearance email...", "info");
+                                const emailPrompt = `Generate a professional and friendly HTML email. The user's vehicle has been given clearance (Fast Track).
+                                - Recipient's Name: ${savedPayload.ownerName}
+                                - Vehicle Number: ${savedPayload.vehicleNumber}
+                                - Approved Location: ${savedPayload.location}
+                                - Validity Period: From ${formatDate(savedPayload.entryDate)} to ${formatDate(savedPayload.expiryDate)}.
                                 - Include a friendly closing.
                                 - The email should be well-formatted with HTML, using headings, bold text, and paragraphs for readability. Do not include any CSS or style tags.`;
-                                    emailBody = await callGeminiApi(emailPrompt);
-                                    const emailSubject = `Vehicle Clearance Confirmation: ${payload.vehicleNumber}`;
-                                    await sendEmail(payload.ownerEmail, emailSubject, emailBody);
-                                } catch (apiError) {
-                                    console.error("Gemini API/Email failed for Fast Track:", apiError);
-                                    showNotification("Clearance saved, but the notification email could not be sent.", "error");
-                                }
+                                emailBody = await callGeminiApi(emailPrompt);
+                                const emailSubject = `Vehicle Clearance Confirmation: ${savedPayload.vehicleNumber}`;
+                                await sendEmail(savedPayload.ownerEmail, emailSubject, emailBody);
+                            } catch (apiError) {
+                                console.error("Gemini API/Email failed for Fast Track:", apiError);
+                                showNotification("Clearance saved, but the notification email could not be sent.", "error");
                             }
-                            // --- End Email Logic ---
                         }
+
                         document.getElementById("modal-container").innerHTML = "";
                     } catch (error) {
-                        showNotification("Failed to save clearance.", "error");
+                        showNotification(`Failed to save clearance: ${error.message}`, "error");
+                    } finally {
                         button.disabled = false;
                     }
                     return;
