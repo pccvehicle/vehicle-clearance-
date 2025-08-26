@@ -311,6 +311,27 @@
     // --- VPS Email Notification Helper ---
     
     // --- Debug Utilities ---
+
+    // --- Local Email Body Generator (No AI, No Network) ---
+    const _escapeHtml = (s) => String(s||'')
+        .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
+        .replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+
+    // Backwards-compatible stub replacing prior AI usage.
+    // Wherever the original code called `callGeminiApi(promptText)` we now
+    // return a simple, styled HTML email using the provided prompt text.
+    const callGeminiApi = async (promptText) => {
+        debugLog('AI disabled: generating static email body locally.');
+        const body = [
+            '<div style="font-family:Inter,Arial,sans-serif;font-size:14px;color:#0f172a">',
+            '<p>Hi,</p>',
+            '<p>This is an automated notification from the Vehicle Clearance System.</p>',
+            promptText ? ('<div style="padding:10px;border:1px solid #e2e8f0;border-radius:8px;background:#f8fafc;white-space:pre-wrap">' + _escapeHtml(promptText) + '</div>') : '',
+            '<p>Regards,<br/>PCC Security</p>',
+            '</div>'
+        ].join('\n');
+        return body;
+    };
     // Toggle verbose logging in the console by setting localStorage.debugEmail = '1'
     // Or add ?debug=1 to the URL.
     let DEBUG_EMAIL = (new URLSearchParams(location.search).has('debug')) ||
