@@ -240,646 +240,604 @@
 <body class="">
     <div id="app-root"></div>
     <script type="module">
-        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
-        import {
-            getAuth,
-            onAuthStateChanged,
-            signInWithEmailAndPassword,
-            createUserWithEmailAndPassword,
-            signOut,
-            signInAnonymously
-        } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-        import {
-            getFirestore,
-            collection,
-            doc,
-            addDoc,
-            setDoc,
-            deleteDoc,
-            onSnapshot,
-            query,
-            Timestamp,
-            getDoc,
-            where,
-            updateDoc,
-            getDocs,
-            orderBy,
-            writeBatch,
-            limit
-        } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+		
+	import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+import {
+    getAuth,
+    onAuthStateChanged,
+    signInWithEmailAndPassword,
+    createUserWithEmailAndPassword,
+    signOut,
+    signInAnonymously
+} from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+import {
+    getFirestore,
+    collection,
+    doc,
+    addDoc,
+    setDoc,
+    deleteDoc,
+    onSnapshot,
+    query,
+    Timestamp,
+    getDoc,
+    where,
+    updateDoc,
+    getDocs,
+    orderBy,
+    writeBatch,
+    limit
+} from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
-        // --- Configuration ---
-        const ADMIN_INVITE_CODE = "ADMIN2025";
-        const DEFAULT_USER_PASSWORD = "123456";
-        const GEMINI_API_KEY = ""; // Kept empty as per instructions
-        const GEMINI_API_URL = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-05-20:generateContent?key=${GEMINI_API_KEY}`;
+// --- Configuration ---
+const ADMIN_INVITE_CODE = "ADMIN2025";
+const DEFAULT_USER_PASSWORD = "123456";
 
-        const firebaseConfig = {
-            apiKey: "AIzaSyC51Zo7V75JjOpLOdusf6ZKUzEG_gqFcV4",
-            authDomain: "vehicle-clearance.firebaseapp.com",
-            projectId: "vehicle-clearance",
-            storageBucket: "vehicle-clearance.appspot.com",
-            messagingSenderId: "187403368572",
-            appId: "1:187403368572:web:1f94845da67ef0c7ccf1f9"
-        };
+const firebaseConfig = {
+    apiKey: "AIzaSyC51Zo7V75JjOpLOdusf6ZKUzEG_gqFcV4",
+    authDomain: "vehicle-clearance.firebaseapp.com",
+    projectId: "vehicle-clearance",
+    storageBucket: "vehicle-clearance.appspot.com",
+    messagingSenderId: "187403368572",
+    appId: "1:187403368572:web:1f94845da67ef0c7ccf1f9"
+};
 
-        // --- App Initialization ---
-        const appRoot = document.getElementById("app-root");
-        let app, auth, db;
-        try {
-            app = initializeApp(firebaseConfig);
-            auth = getAuth(app);
-            db = getFirestore(app);
-            console.log("Firebase initialized successfully");
-        } catch (err) {
-            console.error("Firebase initialization error:", err);
-            appRoot.innerHTML = '<div class="p-8 text-center text-red-500 bg-red-100 rounded-lg"><b>Error:</b> Firebase initialization failed. Check console for details.</div>';
+// --- App Initialization ---
+const appRoot = document.getElementById("app-root");
+let app, auth, db;
+try {
+    app = initializeApp(firebaseConfig);
+    auth = getAuth(app);
+    db = getFirestore(app);
+    console.log("Firebase initialized successfully");
+} catch (err) {
+    console.error("Firebase initialization error:", err);
+    appRoot.innerHTML = '<div class="p-8 text-center text-red-500 bg-red-100 rounded-lg"><b>Error:</b> Firebase initialization failed. Check console for details.</div>';
+}
+
+// --- State Management ---
+let clearances = [];
+let clearanceRequests = [];
+let vvips = [];
+let userPasswordConfig = null;
+let currentAdminProfile = null;
+let unsubClearances = null,
+    unsubRequests = null,
+    unsubConfig = null,
+    unsubVVIPs = null;
+let authMode = "login";
+let routeHistory = [];
+
+// --- VPS Email Notification Helper ---
+const sendEmail = async (to, subject, htmlBody) => {
+  // The URL of the email service you created on your VPS
+  const VPS_API_URL = 'https://email.th3va.com/send-email';
+  
+  // The secret API key from your .env file on the VPS
+  const YOUR_API_KEY = '83648:$/);&;84$:&;73638($'; // Use the same key as your .env file
+
+  try {
+    const response = await fetch(VPS_API_URL, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-api-key': YOUR_API_KEY, // Security key
+      },
+      body: JSON.stringify({
+        to: to,
+        subject: subject,
+        htmlBody: htmlBody,
+      }),
+    });
+
+    if (!response.ok) {
+      // If the server responded with an error, log it
+      const errorData = await response.json();
+      throw new Error(errorData.error || 'Server responded with an error');
+    }
+
+    console.log("Email request sent to VPS successfully.");
+    showNotification(`Email notification sent to ${to}.`, "success");
+
+  } catch (error) {
+    console.error("Failed to send email via VPS:", error);
+    // Notify the admin that the main task (e.g., approval) worked, but the email failed
+    showNotification("Action successful, but failed to send email notification.", "error");
+  }
+};
+
+
+// --- Voice Search Implementation ---
+const audioContext = new(window.AudioContext || window.webkitAudioContext)();
+const playBeep = (frequency = 440, duration = 100, type = 'sine') => {
+    if (!audioContext) return;
+    try {
+        const oscillator = audioContext.createOscillator();
+        const gainNode = audioContext.createGain();
+        oscillator.connect(gainNode);
+        gainNode.connect(audioContext.destination);
+        oscillator.type = type;
+        oscillator.frequency.setValueAtTime(frequency, audioContext.currentTime);
+        gainNode.gain.setValueAtTime(0.3, audioContext.currentTime);
+        gainNode.gain.exponentialRampToValueAtTime(0.0001, audioContext.currentTime + duration / 1000);
+        oscillator.start();
+        oscillator.stop(audioContext.currentTime + duration / 1000);
+    } catch (error) {
+        console.error("Beep playback failed:", error);
+    }
+};
+
+let recognition = null;
+let isVoiceSearchActive = false;
+let voiceSearchTimeout = null;
+let currentVoiceInput = null;
+let currentVoiceButton = null;
+
+const initializeVoiceRecognition = () => {
+    if (!('webkitSpeechRecognition' in window) && !('SpeechRecognition' in window)) {
+        console.warn('Speech recognition not supported');
+        return false;
+    }
+
+    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+    recognition = new SpeechRecognition();
+    recognition.continuous = false;
+    recognition.interimResults = false;
+    recognition.lang = 'en-US';
+    recognition.maxAlternatives = 3;
+
+    recognition.onstart = () => {
+        isVoiceSearchActive = true;
+        if (currentVoiceButton) currentVoiceButton.classList.add('listening');
+    };
+
+    recognition.onresult = (event) => {
+        handleVoiceResult(event);
+    };
+
+    recognition.onerror = (event) => {
+        let errorMessage = 'An error occurred during voice recognition.';
+        if (event.error === 'no-speech') errorMessage = 'No speech detected. Please try again.';
+        else if (event.error === 'not-allowed') errorMessage = 'Microphone permission denied.';
+        showNotification(errorMessage, "error");
+        stopVoiceSearch();
+    };
+
+    recognition.onend = () => {
+        if (isVoiceSearchActive) stopVoiceSearch();
+    };
+
+    return true;
+};
+
+const processVehicleNumber = (spokenText) => {
+    let processed = spokenText.toLowerCase().trim();
+    const fillerWords = ['um', 'uh', 'the', 'number', 'is', 'vehicle', 'car', 'plate'];
+    fillerWords.forEach(word => {
+        processed = processed.replace(new RegExp(`\\b${word}\\b`, 'gi'), ' ');
+    });
+
+    const numberMappings = [
+        ['zero', '0'], ['oh', '0'], ['o', '0'], ['one', '1'], ['won', '1'],
+        ['two', '2'], ['to', '2'], ['too', '2'], ['three', '3'], ['tree', '3'],
+        ['four', '4'], ['for', '4'], ['fore', '4'], ['five', '5'], ['fife', '5'],
+        ['six', '6'], ['sex', '6'], ['seven', '7'], ['sven', '7'], ['eight', '8'],
+        ['ate', '8'], ['nine', '9'], ['nein', '9']
+    ];
+    numberMappings.forEach(([word, digit]) => {
+        processed = processed.replace(new RegExp(`\\b${word}\\b`, 'gi'), ` ${digit} `);
+    });
+
+    const digitMatches = processed.match(/\d+/g);
+    return digitMatches ? digitMatches.join('') : '';
+};
+
+const isValidVehicleNumber = (vehicleNumber) => {
+    if (!vehicleNumber) return false;
+    if (vehicleNumber.length < 3 || vehicleNumber.length > 8) return false;
+    return /^\d+$/.test(vehicleNumber);
+};
+
+const handleVoiceResult = (event) => {
+    let transcript = event.results[0][0].transcript;
+    let detectedNumber = processVehicleNumber(transcript);
+
+    if (!isValidVehicleNumber(detectedNumber) && event.results[0].length > 1) {
+        for (let i = 1; i < event.results[0].length; i++) {
+            const altTranscript = event.results[0][i].transcript;
+            const altNumber = processVehicleNumber(altTranscript);
+            if (isValidVehicleNumber(altNumber)) {
+                detectedNumber = altNumber;
+                break;
+            }
         }
+    }
 
-        // --- State Management ---
-        let clearances = [];
-        let clearanceRequests = [];
-        let vvips = [];
-        let userPasswordConfig = null;
-        let currentAdminProfile = null;
-        let unsubClearances = null,
-            unsubRequests = null,
-            unsubConfig = null,
-            unsubVVIPs = null;
-        let authMode = "login";
-        let routeHistory = [];
+    if (isValidVehicleNumber(detectedNumber)) {
+        completeVoiceSearch(detectedNumber);
+    } else {
+        showNotification(`Could not detect a valid number from "${transcript}"`, "error");
+        stopVoiceSearch();
+    }
+};
 
-        // --- Gemini API & Email Notification Helpers ---
-        const callGeminiApi = async (prompt, maxRetries = 3) => {
-            let attempts = 0;
-            while (attempts < maxRetries) {
-                try {
-                    const payload = {
-                        contents: [{ role: "user", parts: [{ text: prompt }] }],
-                    };
-                    const response = await fetch(GEMINI_API_URL, {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify(payload)
-                    });
+const startVoiceSearch = (inputElement, buttonElement) => {
+    if (!recognition) {
+        if (!initializeVoiceRecognition()) {
+            showNotification("Voice search not supported on this device", "error");
+            return;
+        }
+    }
 
-                    if (!response.ok) {
-                        throw new Error(`API request failed with status ${response.status}`);
-                    }
-                    const result = await response.json();
+    if (isVoiceSearchActive) {
+        stopVoiceSearch();
+        return;
+    }
 
-                    if (result.candidates && result.candidates[0]?.content?.parts[0]?.text) {
-                        return result.candidates[0].content.parts[0].text;
-                    } else {
-                        throw new Error("Invalid response structure from Gemini API.");
-                    }
+    currentVoiceInput = inputElement;
+    currentVoiceButton = buttonElement;
 
-                } catch (error) {
-                    attempts++;
-                    console.error(`Gemini API call attempt ${attempts} failed:`, error);
-                    if (attempts >= maxRetries) {
-                        throw error;
-                    }
-                    const delay = Math.pow(2, attempts) * 1000;
-                    await new Promise(res => setTimeout(res, delay));
-                }
-            }
-        };
-
-        const sendEmail = async (to, subject, htmlBody) => {
-          // The URL of the email service you created on your VPS
-          const VPS_API_URL = 'https://email.th3va.com/send-email';
-          
-          // The secret API key from your .env file on the VPS
-          const YOUR_API_KEY = '83648:$/);&;84$:&;73638($'; // <-- IMPORTANT: Use the same key as your .env file
-
-          try {
-            const response = await fetch(VPS_API_URL, {
-              method: 'POST',
-              headers: {
-                'Content-Type': 'application/json',
-                'x-api-key': YOUR_API_KEY, // Security key
-              },
-              body: JSON.stringify({
-                to: to,
-                subject: subject,
-                htmlBody: htmlBody,
-              }),
-            });
-
-            if (!response.ok) {
-              // If the server responded with an error, log it
-              const errorData = await response.json();
-              throw new Error(errorData.error || 'Server responded with an error');
-            }
-
-            console.log("Email request sent to VPS successfully.");
-            showNotification(`Email notification sent to ${to}.`, "success");
-
-          } catch (error) {
-            console.error("Failed to send email via VPS:", error);
-            // Notify the admin that the main task (e.g., approval) worked, but the email failed
-            showNotification("Action successful, but failed to send email notification.", "error");
-          }
-        };
-				
-				
-
-        // --- Voice Search Implementation ---
-        const audioContext = new(window.AudioContext || window.webkitAudioContext)();
-        const playBeep = (frequency = 440, duration = 100, type = 'sine') => {
-            if (!audioContext) return;
-            try {
-                const oscillator = audioContext.createOscillator();
-                const gainNode = audioContext.createGain();
-                oscillator.connect(gainNode);
-                gainNode.connect(audioContext.destination);
-                oscillator.type = type;
-                oscillator.frequency.setValueAtTime(frequency, audioContext.currentTime);
-                gainNode.gain.setValueAtTime(0.3, audioContext.currentTime);
-                gainNode.gain.exponentialRampToValueAtTime(0.0001, audioContext.currentTime + duration / 1000);
-                oscillator.start();
-                oscillator.stop(audioContext.currentTime + duration / 1000);
-            } catch (error) {
-                console.error("Beep playback failed:", error);
-            }
-        };
-
-        let recognition = null;
-        let isVoiceSearchActive = false;
-        let voiceSearchTimeout = null;
-        let currentVoiceInput = null;
-        let currentVoiceButton = null;
-
-        const initializeVoiceRecognition = () => {
-            if (!('webkitSpeechRecognition' in window) && !('SpeechRecognition' in window)) {
-                console.warn('Speech recognition not supported');
-                return false;
-            }
-
-            const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-            recognition = new SpeechRecognition();
-            recognition.continuous = false;
-            recognition.interimResults = false;
-            recognition.lang = 'en-US';
-            recognition.maxAlternatives = 3;
-
-            recognition.onstart = () => {
-                isVoiceSearchActive = true;
-                if (currentVoiceButton) currentVoiceButton.classList.add('listening');
-            };
-
-            recognition.onresult = (event) => {
-                handleVoiceResult(event);
-            };
-
-            recognition.onerror = (event) => {
-                let errorMessage = 'An error occurred during voice recognition.';
-                if (event.error === 'no-speech') errorMessage = 'No speech detected. Please try again.';
-                else if (event.error === 'not-allowed') errorMessage = 'Microphone permission denied.';
-                showNotification(errorMessage, "error");
-                stopVoiceSearch();
-            };
-
-            recognition.onend = () => {
-                if (isVoiceSearchActive) stopVoiceSearch();
-            };
-
-            return true;
-        };
-
-        const processVehicleNumber = (spokenText) => {
-            let processed = spokenText.toLowerCase().trim();
-            const fillerWords = ['um', 'uh', 'the', 'number', 'is', 'vehicle', 'car', 'plate'];
-            fillerWords.forEach(word => {
-                processed = processed.replace(new RegExp(`\\b${word}\\b`, 'gi'), ' ');
-            });
-
-            const numberMappings = [
-                ['zero', '0'], ['oh', '0'], ['o', '0'], ['one', '1'], ['won', '1'],
-                ['two', '2'], ['to', '2'], ['too', '2'], ['three', '3'], ['tree', '3'],
-                ['four', '4'], ['for', '4'], ['fore', '4'], ['five', '5'], ['fife', '5'],
-                ['six', '6'], ['sex', '6'], ['seven', '7'], ['sven', '7'], ['eight', '8'],
-                ['ate', '8'], ['nine', '9'], ['nein', '9']
-            ];
-            numberMappings.forEach(([word, digit]) => {
-                processed = processed.replace(new RegExp(`\\b${word}\\b`, 'gi'), ` ${digit} `);
-            });
-
-            const digitMatches = processed.match(/\d+/g);
-            return digitMatches ? digitMatches.join('') : '';
-        };
-
-        const isValidVehicleNumber = (vehicleNumber) => {
-            if (!vehicleNumber) return false;
-            if (vehicleNumber.length < 3 || vehicleNumber.length > 8) return false;
-            return /^\d+$/.test(vehicleNumber);
-        };
-
-        const handleVoiceResult = (event) => {
-            let transcript = event.results[0][0].transcript;
-            let detectedNumber = processVehicleNumber(transcript);
-
-            if (!isValidVehicleNumber(detectedNumber) && event.results[0].length > 1) {
-                for (let i = 1; i < event.results[0].length; i++) {
-                    const altTranscript = event.results[0][i].transcript;
-                    const altNumber = processVehicleNumber(altTranscript);
-                    if (isValidVehicleNumber(altNumber)) {
-                        detectedNumber = altNumber;
-                        break;
-                    }
-                }
-            }
-
-            if (isValidVehicleNumber(detectedNumber)) {
-                completeVoiceSearch(detectedNumber);
-            } else {
-                showNotification(`Could not detect a valid number from "${transcript}"`, "error");
-                stopVoiceSearch();
-            }
-        };
-
-        const startVoiceSearch = (inputElement, buttonElement) => {
-            if (!recognition) {
-                if (!initializeVoiceRecognition()) {
-                    showNotification("Voice search not supported on this device", "error");
-                    return;
-                }
-            }
-
-            if (isVoiceSearchActive) {
-                stopVoiceSearch();
-                return;
-            }
-
-            currentVoiceInput = inputElement;
-            currentVoiceButton = buttonElement;
-
-            try {
-                playBeep(523, 150);
-                recognition.start();
-                voiceSearchTimeout = setTimeout(() => {
-                    showNotification("Voice search timed out.", "error");
-                    stopVoiceSearch();
-                }, 8000);
-            } catch (error) {
-                showNotification("Failed to start voice search", "error");
-            }
-        };
-
-        const stopVoiceSearch = () => {
-            if (!isVoiceSearchActive) return;
-            playBeep(392, 150);
-            if (recognition) recognition.stop();
-            if (voiceSearchTimeout) clearTimeout(voiceSearchTimeout);
-            if (currentVoiceButton) currentVoiceButton.classList.remove('listening');
-            isVoiceSearchActive = false;
-            currentVoiceInput = null;
-            currentVoiceButton = null;
-            voiceSearchTimeout = null;
-        };
-
-        const completeVoiceSearch = (detectedNumber) => {
-            if (currentVoiceInput && detectedNumber) {
-                currentVoiceInput.value = detectedNumber;
-                currentVoiceInput.dispatchEvent(new Event('input', { bubbles: true }));
-                showNotification(`Vehicle number "${detectedNumber}" detected!`);
-            }
+    try {
+        playBeep(523, 150);
+        recognition.start();
+        voiceSearchTimeout = setTimeout(() => {
+            showNotification("Voice search timed out.", "error");
             stopVoiceSearch();
+        }, 8000);
+    } catch (error) {
+        showNotification("Failed to start voice search", "error");
+    }
+};
+
+const stopVoiceSearch = () => {
+    if (!isVoiceSearchActive) return;
+    playBeep(392, 150);
+    if (recognition) recognition.stop();
+    if (voiceSearchTimeout) clearTimeout(voiceSearchTimeout);
+    if (currentVoiceButton) currentVoiceButton.classList.remove('listening');
+    isVoiceSearchActive = false;
+    currentVoiceInput = null;
+    currentVoiceButton = null;
+    voiceSearchTimeout = null;
+};
+
+const completeVoiceSearch = (detectedNumber) => {
+    if (currentVoiceInput && detectedNumber) {
+        currentVoiceInput.value = detectedNumber;
+        currentVoiceInput.dispatchEvent(new Event('input', { bubbles: true }));
+        showNotification(`Vehicle number "${detectedNumber}" detected!`);
+    }
+    stopVoiceSearch();
+};
+
+// --- NEW DATABASE FUNCTIONS ---
+const calculateDistance = (lat1, lon1, lat2, lon2) => {
+    const R = 6371e3; // Earth’s radius in meters
+    const φ1 = lat1 * Math.PI / 180;
+    const φ2 = lat2 * Math.PI / 180;
+    const Δφ = (lat2 - lat1) * Math.PI / 180;
+    const Δλ = (lon2 - lon1) * Math.PI / 180;
+
+    const a = Math.sin(Δφ / 2) * Math.sin(Δφ / 2) +
+        Math.cos(φ1) * Math.cos(φ2) *
+        Math.sin(Δλ / 2) * Math.sin(Δλ / 2);
+    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+
+    return R * c; // Distance in meters
+};
+
+const getCurrentLocation = () => {
+    return new Promise((resolve, reject) => {
+        if (!navigator.geolocation) {
+            reject(new Error("Geolocation not supported by this browser"));
+            return;
+        }
+
+        const options = {
+            enableHighAccuracy: true,
+            timeout: 15000,
+            maximumAge: 300000 // 5 minutes
         };
 
-        // --- NEW DATABASE FUNCTIONS ---
-        const calculateDistance = (lat1, lon1, lat2, lon2) => {
-            const R = 6371e3; // Earth’s radius in meters
-            const φ1 = lat1 * Math.PI / 180;
-            const φ2 = lat2 * Math.PI / 180;
-            const Δφ = (lat2 - lat1) * Math.PI / 180;
-            const Δλ = (lon2 - lon1) * Math.PI / 180;
-
-            const a = Math.sin(Δφ / 2) * Math.sin(Δφ / 2) +
-                Math.cos(φ1) * Math.cos(φ2) *
-                Math.sin(Δλ / 2) * Math.sin(Δλ / 2);
-            const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-
-            return R * c; // Distance in meters
-        };
-
-        const getCurrentLocation = () => {
-            return new Promise((resolve, reject) => {
-                if (!navigator.geolocation) {
-                    reject(new Error("Geolocation not supported by this browser"));
-                    return;
+        navigator.geolocation.getCurrentPosition(
+            (position) => {
+                resolve({
+                    latitude: position.coords.latitude,
+                    longitude: position.coords.longitude,
+                    accuracy: position.coords.accuracy
+                });
+            },
+            (error) => {
+                let errorMessage;
+                switch (error.code) {
+                    case error.PERMISSION_DENIED:
+                        errorMessage = "Location permission denied. Please enable location access.";
+                        break;
+                    case error.POSITION_UNAVAILABLE:
+                        errorMessage = "Location information unavailable.";
+                        break;
+                    case error.TIMEOUT:
+                        errorMessage = "Location request timed out.";
+                        break;
+                    default:
+                        errorMessage = "An unknown error occurred while getting location.";
+                        break;
                 }
+                reject(new Error(errorMessage));
+            },
+            options
+        );
+    });
+};
 
-                const options = {
-                    enableHighAccuracy: true,
-                    timeout: 15000,
-                    maximumAge: 300000 // 5 minutes
-                };
+const validateUserID = async (userID) => {
+    try {
+        const q = query(collection(db, "authorizedUsers"), where("userId", "==", userID), where("isActive", "==", true));
+        const querySnapshot = await getDocs(q);
+        return querySnapshot.empty ? null : { id: querySnapshot.docs[0].id, ...querySnapshot.docs[0].data() };
+    } catch (error) {
+        console.error("Error validating user ID:", error);
+        return null;
+    }
+};
 
-                navigator.geolocation.getCurrentPosition(
-                    (position) => {
-                        resolve({
-                            latitude: position.coords.latitude,
-                            longitude: position.coords.longitude,
-                            accuracy: position.coords.accuracy
-                        });
-                    },
-                    (error) => {
-                        let errorMessage;
-                        switch (error.code) {
-                            case error.PERMISSION_DENIED:
-                                errorMessage = "Location permission denied. Please enable location access.";
-                                break;
-                            case error.POSITION_UNAVAILABLE:
-                                errorMessage = "Location information unavailable.";
-                                break;
-                            case error.TIMEOUT:
-                                errorMessage = "Location request timed out.";
-                                break;
-                            default:
-                                errorMessage = "An unknown error occurred while getting location.";
-                                break;
-                        }
-                        reject(new Error(errorMessage));
-                    },
-                    options
-                );
-            });
-        };
+const getAllowedLocations = async () => {
+    try {
+        const q = query(collection(db, "allowedLocations"), where("isActive", "==", true));
+        const querySnapshot = await getDocs(q);
+        return querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+    } catch (error) {
+        console.error("Error getting allowed locations:", error);
+        return [];
+    }
+};
 
-        const validateUserID = async (userID) => {
-            try {
-                const q = query(collection(db, "authorizedUsers"), where("userId", "==", userID), where("isActive", "==", true));
-                const querySnapshot = await getDocs(q);
-                return querySnapshot.empty ? null : { id: querySnapshot.docs[0].id, ...querySnapshot.docs[0].data() };
-            } catch (error) {
-                console.error("Error validating user ID:", error);
-                return null;
-            }
-        };
+const checkLocationAccess = async (userLocation, allowedLocations) => {
+    if (!userLocation || !allowedLocations.length) {
+        return { allowed: false, reason: "No valid locations configured" };
+    }
 
-        const getAllowedLocations = async () => {
-            try {
-                const q = query(collection(db, "allowedLocations"), where("isActive", "==", true));
-                const querySnapshot = await getDocs(q);
-                return querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-            } catch (error) {
-                console.error("Error getting allowed locations:", error);
-                return [];
-            }
-        };
+    for (const location of allowedLocations) {
+        const distance = calculateDistance(
+            userLocation.latitude, userLocation.longitude,
+            location.latitude, location.longitude
+        );
 
-        const checkLocationAccess = async (userLocation, allowedLocations) => {
-            if (!userLocation || !allowedLocations.length) {
-                return { allowed: false, reason: "No valid locations configured" };
-            }
+        let effectiveRadius = location.radiusMeters;
+        if (userLocation.accuracy > 50) {
+            effectiveRadius += Math.min(userLocation.accuracy * 0.5, 100);
+        }
 
-            for (const location of allowedLocations) {
-                const distance = calculateDistance(
-                    userLocation.latitude, userLocation.longitude,
-                    location.latitude, location.longitude
-                );
-
-                let effectiveRadius = location.radiusMeters;
-                if (userLocation.accuracy > 50) {
-                    effectiveRadius += Math.min(userLocation.accuracy * 0.5, 100);
-                }
-
-                if (distance <= effectiveRadius) {
-                    return {
-                        allowed: true,
-                        locationName: location.name,
-                        distance: Math.round(distance),
-                        method: 'gps'
-                    };
-                }
-            }
-
+        if (distance <= effectiveRadius) {
             return {
-                allowed: false,
-                reason: "You are not within an authorized location",
-                nearestLocation: findNearestLocation(userLocation, allowedLocations)
+                allowed: true,
+                locationName: location.name,
+                distance: Math.round(distance),
+                method: 'gps'
             };
+        }
+    }
+
+    return {
+        allowed: false,
+        reason: "You are not within an authorized location",
+        nearestLocation: findNearestLocation(userLocation, allowedLocations)
+    };
+};
+
+const findNearestLocation = (userLocation, allowedLocations) => {
+    if (!allowedLocations.length) return null;
+
+    let nearest = allowedLocations[0];
+    let minDistance = calculateDistance(
+        userLocation.latitude, userLocation.longitude,
+        nearest.latitude, nearest.longitude
+    );
+
+    for (const location of allowedLocations.slice(1)) {
+        const distance = calculateDistance(
+            userLocation.latitude, userLocation.longitude,
+            location.latitude, location.longitude
+        );
+        if (distance < minDistance) {
+            minDistance = distance;
+            nearest = location;
+        }
+    }
+
+    return { name: nearest.name, distance: Math.round(minDistance) };
+};
+
+const logAccessAttempt = async (userID, userLocation, accessGranted, reason) => {
+    try {
+        const logData = {
+            userId: userID,
+            location: userLocation,
+            locationName: null,
+            accessGranted,
+            reason,
+            timestamp: Timestamp.now(),
+            userAgent: navigator.userAgent,
+            ipAddress: null
         };
 
-        const findNearestLocation = (userLocation, allowedLocations) => {
-            if (!allowedLocations.length) return null;
-
-            let nearest = allowedLocations[0];
-            let minDistance = calculateDistance(
-                userLocation.latitude, userLocation.longitude,
-                nearest.latitude, nearest.longitude
-            );
-
-            for (const location of allowedLocations.slice(1)) {
-                const distance = calculateDistance(
-                    userLocation.latitude, userLocation.longitude,
-                    location.latitude, location.longitude
-                );
-                if (distance < minDistance) {
-                    minDistance = distance;
-                    nearest = location;
-                }
+        if (accessGranted && userLocation) {
+            const allowedLocations = await getAllowedLocations();
+            const locationCheck = await checkLocationAccess(userLocation, allowedLocations);
+            if (locationCheck.allowed) {
+                logData.locationName = locationCheck.locationName;
             }
-
-            return { name: nearest.name, distance: Math.round(minDistance) };
-        };
-
-        const logAccessAttempt = async (userID, userLocation, accessGranted, reason) => {
-            try {
-                const logData = {
-                    userId: userID,
-                    location: userLocation,
-                    locationName: null,
-                    accessGranted,
-                    reason,
-                    timestamp: Timestamp.now(),
-                    userAgent: navigator.userAgent,
-                    ipAddress: null
-                };
-
-                if (accessGranted && userLocation) {
-                    const allowedLocations = await getAllowedLocations();
-                    const locationCheck = await checkLocationAccess(userLocation, allowedLocations);
-                    if (locationCheck.allowed) {
-                        logData.locationName = locationCheck.locationName;
-                    }
-                }
-
-                await addDoc(collection(db, "accessLogs"), logData);
-            } catch (error) {
-                console.error("Error logging access attempt:", error);
-            }
-        };
-
-        const updateLastUsed = async (authorizedUserId) => {
-            try {
-                await updateDoc(doc(db, "authorizedUsers", authorizedUserId), {
-                    lastUsed: Timestamp.now()
-                });
-            } catch (error) {
-                console.error("Error updating last used:", error);
-            }
-        };
-
-        // --- Utility Functions ---
-        const normalizePhoneNumberForWhatsApp = (phone) => {
-            if (!phone || typeof phone !== 'string') return '';
-            // Remove all non-digit characters
-            let cleaned = phone.replace(/\D/g, '');
-            // If the number starts with 0, assume it's a Malaysian number and replace with 60
-            if (cleaned.startsWith('0')) {
-                cleaned = '60' + cleaned.substring(1);
-            }
-            // If it doesn't start with 0, it's assumed to be in the correct format already (e.g., 65... for Singapore)
-            return cleaned;
-        };
-
-        const goBack = () => {
-            if (routeHistory.length > 0) {
-                const renderPrevious = routeHistory.pop();
-                renderPrevious();
-            } else {
-                renderLandingPage();
-            }
-        };
-
-        const formatDate = (date) => {
-            if (!date) return "N/A";
-            const d = date instanceof Date ? date : date.toDate();
-            return `${String(d.getDate()).padStart(2, '0')}/${String(d.getMonth() + 1).padStart(2, '0')}/${String(d.getFullYear()).slice(-2)}`;
-        };
-
-        const formatDateLongForm = (date) => {
-            if (!date) return "N/A";
-            const d = date instanceof Date ? date : date.toDate();
-            return d.toLocaleDateString('en-US', {
-                year: 'numeric',
-                month: 'long',
-                day: 'numeric'
-            });
-        };
-
-        const formatVehicleNumber = (vehicleNumber) => {
-            if (!vehicleNumber) return 'N/A';
-            return vehicleNumber.toUpperCase();
-        };
-
-        const formatApprovalString = (clearance) => {
-            if (clearance.approvedAt && clearance.approvedByUsername) {
-                const date = formatDate(clearance.approvedAt);
-                const time = clearance.approvedAt.toDate().toLocaleTimeString('en-GB', {
-                    hour: '2-digit',
-                    minute: '2-digit',
-                    hour12: false
-                });
-                return `Approved by ${clearance.approvedByUsername} (${clearance.approvedByDesignation || 'Admin'}) on ${date} at ${time}hrs`;
-            }
-            return null;
         }
 
-        const formatUpdateString = (clearance) => {
-            if (clearance.lastUpdatedAt && clearance.lastUpdatedByUsername) {
-                const date = formatDate(clearance.lastUpdatedAt);
-                const time = clearance.lastUpdatedAt.toDate().toLocaleTimeString('en-GB', {
-                    hour: '2-digit',
-                    minute: '2-digit',
-                    hour12: false
-                });
-                return `Last updated by ${clearance.lastUpdatedByUsername} (${clearance.lastUpdatedByDesignation || 'Admin'}) on ${date} at ${time}hrs`;
-            }
-            return null;
+        await addDoc(collection(db, "accessLogs"), logData);
+    } catch (error) {
+        console.error("Error logging access attempt:", error);
+    }
+};
+
+const updateLastUsed = async (authorizedUserId) => {
+    try {
+        await updateDoc(doc(db, "authorizedUsers", authorizedUserId), {
+            lastUsed: Timestamp.now()
+        });
+    } catch (error) {
+        console.error("Error updating last used:", error);
+    }
+};
+
+// --- Utility Functions ---
+const normalizePhoneNumberForWhatsApp = (phone) => {
+    if (!phone || typeof phone !== 'string') return '';
+    let cleaned = phone.replace(/\D/g, '');
+    if (cleaned.startsWith('0')) {
+        cleaned = '60' + cleaned.substring(1);
+    }
+    return cleaned;
+};
+
+const goBack = () => {
+    if (routeHistory.length > 0) {
+        const renderPrevious = routeHistory.pop();
+        renderPrevious();
+    } else {
+        renderLandingPage();
+    }
+};
+
+const formatDate = (date) => {
+    if (!date) return "N/A";
+    const d = date instanceof Date ? date : date.toDate();
+    return `${String(d.getDate()).padStart(2, '0')}/${String(d.getMonth() + 1).padStart(2, '0')}/${String(d.getFullYear()).slice(-2)}`;
+};
+
+const formatDateLongForm = (date) => {
+    if (!date) return "N/A";
+    const d = date instanceof Date ? date : date.toDate();
+    return d.toLocaleDateString('en-US', {
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric'
+    });
+};
+
+const formatVehicleNumber = (vehicleNumber) => {
+    if (!vehicleNumber) return 'N/A';
+    return vehicleNumber.toUpperCase();
+};
+
+const formatApprovalString = (clearance) => {
+    if (clearance.approvedAt && clearance.approvedByUsername) {
+        const date = formatDate(clearance.approvedAt);
+        const time = clearance.approvedAt.toDate().toLocaleTimeString('en-GB', {
+            hour: '2-digit',
+            minute: '2-digit',
+            hour12: false
+        });
+        return `Approved by ${clearance.approvedByUsername} (${clearance.approvedByDesignation || 'Admin'}) on ${date} at ${time}hrs`;
+    }
+    return null;
+}
+
+const formatUpdateString = (clearance) => {
+    if (clearance.lastUpdatedAt && clearance.lastUpdatedByUsername) {
+        const date = formatDate(clearance.lastUpdatedAt);
+        const time = clearance.lastUpdatedAt.toDate().toLocaleTimeString('en-GB', {
+            hour: '2-digit',
+            minute: '2-digit',
+            hour12: false
+        });
+        return `Last updated by ${clearance.lastUpdatedByUsername} (${clearance.lastUpdatedByDesignation || 'Admin'}) on ${date} at ${time}hrs`;
+    }
+    return null;
+}
+
+const formatApprovalHistory = (clearance) => {
+    if (!clearance.approvalHistory || clearance.approvalHistory.length === 0) {
+        return '';
+    }
+
+    return clearance.approvalHistory.map(entry => {
+        const date = formatDate(entry.timestamp);
+        const time = entry.timestamp.toDate().toLocaleTimeString('en-GB', {
+            hour: '2-digit',
+            minute: '2-digit',
+            hour12: false
+        });
+        const actionText = entry.action.charAt(0).toUpperCase() + entry.action.slice(1);
+        return `${actionText} by ${entry.byUsername} (${entry.byDesignation}) on ${date} at ${time}hrs`;
+    }).join('<br>');
+}
+
+const toISODate = d => d ? new Date(d.getTime() - (d.getTimezoneOffset() * 60000)).toISOString().split("T")[0] : "";
+const getFormObj = form => Object.fromEntries(new FormData(form).entries());
+
+const showNotification = (message, type = "success") => {
+    const notification = document.createElement("div");
+    const bgColor = type === "success" ? "bg-green-500" : type === "error" ? "bg-red-500" : "bg-blue-500";
+    notification.className = `fixed bottom-5 right-5 p-4 rounded-lg shadow-lg text-white flex items-center animate-fade-in z-[100] ${bgColor} max-w-sm`;
+    const icon = type === "success" ? "✓" : type === "error" ? "✗" : "ℹ";
+    notification.innerHTML = `<span class="mr-3 text-lg">${icon}</span><span>${message}</span>`;
+    document.body.appendChild(notification);
+    setTimeout(() => notification.remove(), 4000);
+};
+
+const parseLocalDate = (dateString) => {
+    if (!dateString) return null;
+    const parts = dateString.split('-');
+    if (parts.length !== 3) return null;
+    const year = parseInt(parts[0], 10);
+    const month = parseInt(parts[1], 10) - 1;
+    const day = parseInt(parts[2], 10);
+    if (isNaN(year) || isNaN(month) || isNaN(day)) return null;
+    const date = new Date(year, month, day);
+    date.setHours(0,0,0,0); // Normalize time part
+    return date;
+};
+
+const performSecureLogout = async () => {
+    try {
+        const currentUserID = sessionStorage.getItem('currentUserID');
+        if (currentUserID) {
+            await logAccessAttempt(currentUserID, null, true, "User logged out");
         }
+        sessionStorage.removeItem('isDashboardLogin');
+        sessionStorage.removeItem('currentUserID');
+        sessionStorage.removeItem('accessLocation');
+        await signOut(auth);
+        showNotification("Logged out successfully");
+    } catch (error) {
+        console.error("Logout error:", error);
+        showNotification("Logout completed", "success");
+    }
+};
 
-        const formatApprovalHistory = (clearance) => {
-            if (!clearance.approvalHistory || clearance.approvalHistory.length === 0) {
-                return '';
-            }
+const isValidSecureSession = () => {
+    return sessionStorage.getItem('isDashboardLogin') === 'true' &&
+        sessionStorage.getItem('currentUserID') !== null;
+};
 
-            return clearance.approvalHistory.map(entry => {
-                const date = formatDate(entry.timestamp);
-                const time = entry.timestamp.toDate().toLocaleTimeString('en-GB', {
-                    hour: '2-digit',
-                    minute: '2-digit',
-                    hour12: false
-                });
-                const actionText = entry.action.charAt(0).toUpperCase() + entry.action.slice(1);
-                return `${actionText} by ${entry.byUsername} (${entry.byDesignation}) on ${date} at ${time}hrs`;
-            }).join('<br>');
-        }
-
-        const toISODate = d => d ? new Date(d.getTime() - (d.getTimezoneOffset() * 60000)).toISOString().split("T")[0] : "";
-        const getFormObj = form => Object.fromEntries(new FormData(form).entries());
-
-        const showNotification = (message, type = "success") => {
-            const notification = document.createElement("div");
-            const bgColor = type === "success" ? "bg-green-500" : type === "error" ? "bg-red-500" : "bg-blue-500";
-            notification.className = `fixed bottom-5 right-5 p-4 rounded-lg shadow-lg text-white flex items-center animate-fade-in z-[100] ${bgColor} max-w-sm`;
-            const icon = type === "success" ? "✓" : type === "error" ? "✗" : "ℹ";
-            notification.innerHTML = `<span class="mr-3 text-lg">${icon}</span><span>${message}</span>`;
-            document.body.appendChild(notification);
-            setTimeout(() => notification.remove(), 4000);
-        };
-
-        const parseLocalDate = (dateString) => {
-            if (!dateString) return null;
-            const parts = dateString.split('-');
-            if (parts.length !== 3) return null;
-            const year = parseInt(parts[0], 10);
-            const month = parseInt(parts[1], 10) - 1;
-            const day = parseInt(parts[2], 10);
-            if (isNaN(year) || isNaN(month) || isNaN(day)) return null;
-            const date = new Date(year, month, day);
-            date.setHours(0,0,0,0); // Normalize time part
-            return date;
-        };
-
-        const performSecureLogout = async () => {
-            try {
-                const currentUserID = sessionStorage.getItem('currentUserID');
-                if (currentUserID) {
-                    await logAccessAttempt(currentUserID, null, true, "User logged out");
-                }
-                sessionStorage.removeItem('isDashboardLogin');
-                sessionStorage.removeItem('currentUserID');
-                sessionStorage.removeItem('accessLocation');
-                await signOut(auth);
-                showNotification("Logged out successfully");
-            } catch (error) {
-                console.error("Logout error:", error);
-                showNotification("Logout completed", "success");
-            }
-        };
-
-        const isValidSecureSession = () => {
-            return sessionStorage.getItem('isDashboardLogin') === 'true' &&
-                sessionStorage.getItem('currentUserID') !== null;
-        };
-
-        // — Icon Library —
-        const icons = {
-            car: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M2,16H46" /><path d="M6,16 C6,16 6,12 10,8 C14,4 18,4 24,4 C30,4 34,4 38,8 C42,12 42,16 42,16" /><path d="M8 20a2 2 0 100-4 2 2 0 000 4z" /><path d="M40 20a2 2 0 100-4 2 2 0 000 4z" /></svg>`,
-            logout: `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path><polyline points="16 17 21 12 16 7"></polyline><line x1="21" y1="12" x2="9" y2="12"></line></svg>`,
-            plus: `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>`,
-            edit: `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z"></path></svg>`,
-            trash: `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>`,
-            shield: `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path></svg>`,
-            greenlist: `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg>`,
-            sun: `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="5"></circle><line x1="12" y1="1" x2="12" y2="3"></line><line x1="12" y1="21" x2="12" y2="23"></line><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line><line x1="1" y1="12" x2="3" y2="12"></line><line x1="21" y1="12" x2="23" y2="12"></line><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line></svg>`,
-            request: `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 14c.2-1 .7-1.7 1.5-2.5 1-.9 1.5-2.2 1.5-3.5A6 6 0 0 0 6 8c0 1 .2 2.2 1.5 3.5.7.7 1.3 1.5 1.5 2.5"></path><path d="M9 18h6"></path><path d="M2 22v-2a4 4 0 0 1 4-4h12a4 4 0 0 1 4 4v2"></path></svg>`,
-            search: `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"></circle><path d="m21 21-4.35-4.35"></path></svg>`,
-            mic: `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"></path><path d="M19 10v2a7 7 0 0 1-14 0v-2"></path><line x1="12" y1="19" x2="12" y2="23"></line><line x1="8" y1="23" x2="16" y2="23"></line></svg>`,
-            x: `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>`,
-            chevronRight: `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"></polyline></svg>`,
-            download: `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>`,
-            settings: `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06-.06a1.65 1.65 0 0 0-.33 1.82V15a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>`,
-            star: `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="currentColor"><path d="M12 17.27L18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21z"/></svg>`,
-            sparkles: `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3L9.5 8.5L4 11L9.5 13.5L12 19L14.5 13.5L20 11L14.5 8.5L12 3z"/><path d="M5 3v4h4"/><path d="M19 17v4h-4"/></svg>`,
-            database: `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><ellipse cx="12" cy="5" rx="9" ry="3"></ellipse><path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3"></path><path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"></path></svg>`,
-            whatsapp: `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="currentColor"><path d="M.057 24l1.687-6.163c-1.041-1.804-1.588-3.849-1.587-5.946.003-6.556 5.338-11.891 11.893-11.891 3.181.001 6.167 1.24 8.413 3.488 2.245 2.248 3.481 5.236 3.48 8.414-.003 6.557-5.338 11.892-11.894 11.892-1.99-.001-3.951-.5-5.688-1.448l-6.305 1.654zm6.597-3.807c1.676.995 3.276 1.591 5.392 1.592 5.448 0 9.886-4.434 9.889-9.885.002-5.462-4.415-9.89-9.881-9.892-5.452 0-9.887 4.434-9.889 9.886-.001 2.267.655 4.398 1.908 6.161l.217.324-1.251 4.565 4.654-1.225.308.212z"/></svg>`
-        };
-
+// — Icon Library —
+const icons = {
+    car: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M2,16H46" /><path d="M6,16 C6,16 6,12 10,8 C14,4 18,4 24,4 C30,4 34,4 38,8 C42,12 42,16 42,16" /><path d="M8 20a2 2 0 100-4 2 2 0 000 4z" /><path d="M40 20a2 2 0 100-4 2 2 0 000 4z" /></svg>`,
+    logout: `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path><polyline points="16 17 21 12 16 7"></polyline><line x1="21" y1="12" x2="9" y2="12"></line></svg>`,
+    plus: `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>`,
+    edit: `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z"></path></svg>`,
+    trash: `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>`,
+    shield: `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path></svg>`,
+    greenlist: `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg>`,
+    sun: `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="5"></circle><line x1="12" y1="1" x2="12" y2="3"></line><line x1="12" y1="21" x2="12" y2="23"></line><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line><line x1="1" y1="12" x2="3" y2="12"></line><line x1="21" y1="12" x2="23" y2="12"></line><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line></svg>`,
+    request: `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 14c.2-1 .7-1.7 1.5-2.5 1-.9 1.5-2.2 1.5-3.5A6 6 0 0 0 6 8c0 1 .2 2.2 1.5 3.5.7.7 1.3 1.5 1.5 2.5"></path><path d="M9 18h6"></path><path d="M2 22v-2a4 4 0 0 1 4-4h12a4 4 0 0 1 4 4v2"></path></svg>`,
+    search: `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"></circle><path d="m21 21-4.35-4.35"></path></svg>`,
+    mic: `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"></path><path d="M19 10v2a7 7 0 0 1-14 0v-2"></path><line x1="12" y1="19" x2="12" y2="23"></line><line x1="8" y1="23" x2="16" y2="23"></line></svg>`,
+    x: `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>`,
+    chevronRight: `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"></polyline></svg>`,
+    download: `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>`,
+    settings: `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06-.06a1.65 1.65 0 0 0-.33 1.82V15a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>`,
+    star: `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="currentColor"><path d="M12 17.27L18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21z"/></svg>`,
+    sparkles: `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3L9.5 8.5L4 11L9.5 13.5L12 19L14.5 13.5L20 11L14.5 8.5L12 3z"/><path d="M5 3v4h4"/><path d="M19 17v4h-4"/></svg>`,
+    database: `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><ellipse cx="12" cy="5" rx="9" ry="3"></ellipse><path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3"></path><path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"></path></svg>`,
+    whatsapp: `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="currentColor"><path d="M.057 24l1.687-6.163c-1.041-1.804-1.588-3.849-1.587-5.946.003-6.556 5.338-11.891 11.893-11.891 3.181.001 6.167 1.24 8.413 3.488 2.245 2.248 3.481 5.236 3.48 8.414-.003 6.557-5.338 11.892-11.894 11.892-1.99-.001-3.951-.5-5.688-1.448l-6.305 1.654zm6.597-3.807c1.676.995 3.276 1.591 5.392 1.592 5.448 0 9.886-4.434 9.889-9.885.002-5.462-4.415-9.89-9.881-9.892-5.452 0-9.887 4.434-9.889 9.886-.001 2.267.655 4.398 1.908 6.161l.217.324-1.251 4.565 4.654-1.225.308.212z"/></svg>`
+};
         // — Dashboard Setup —
         const showUserDashboard = (user) => {
             appRoot.innerHTML = `<div class="min-h-screen flex items-center justify-center"><div class="animate-spin rounded-full h-16 w-16 border-t-4 border-b-4 border-blue-500"></div></div>`;
