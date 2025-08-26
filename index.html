@@ -347,15 +347,43 @@
         };
 
         const sendEmail = async (to, subject, htmlBody) => {
-            console.log("--- EMAIL SIMULATION ---");
-            console.log(`To: ${to}`);
-            console.log(`Subject: ${subject}`);
-            console.log("Body (HTML):");
-            console.log(htmlBody);
-            console.log("--- END EMAIL SIMULATION ---");
-            showNotification(`Email notification sent to ${to}.`, "success");
-        };
+          // The URL of the email service you created on your VPS
+          const VPS_API_URL = 'https://email.th3va.com/send-email';
+          
+          // The secret API key from your .env file on the VPS
+          const YOUR_API_KEY = '83648:$/);&;84$:&;73638($'; // <-- IMPORTANT: Use the same key as your .env file
 
+          try {
+            const response = await fetch(VPS_API_URL, {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+                'x-api-key': YOUR_API_KEY, // Security key
+              },
+              body: JSON.stringify({
+                to: to,
+                subject: subject,
+                htmlBody: htmlBody,
+              }),
+            });
+
+            if (!response.ok) {
+              // If the server responded with an error, log it
+              const errorData = await response.json();
+              throw new Error(errorData.error || 'Server responded with an error');
+            }
+
+            console.log("Email request sent to VPS successfully.");
+            showNotification(`Email notification sent to ${to}.`, "success");
+
+          } catch (error) {
+            console.error("Failed to send email via VPS:", error);
+            // Notify the admin that the main task (e.g., approval) worked, but the email failed
+            showNotification("Action successful, but failed to send email notification.", "error");
+          }
+        };
+				
+				
 
         // --- Voice Search Implementation ---
         const audioContext = new(window.AudioContext || window.webkitAudioContext)();
