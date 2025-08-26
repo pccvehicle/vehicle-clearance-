@@ -309,42 +309,75 @@
     let routeHistory = [];
 
     // --- VPS Email Notification Helper ---
-    const sendEmail = async (to, subject, htmlBody) => {
-      // The URL of the email service you created on your VPS
-      const VPS_API_URL = 'https://email.th3va.com/send-email';
-      
-      // The secret API key from your .env file on the VPS
-      const YOUR_API_KEY = '83648:$/);&;84$:&;73638($'; // Use the same key as your .env file
+    
+    // --- Debug Utilities ---
+    // Toggle verbose logging in the console by setting localStorage.debugEmail = '1'
+    // Or add ?debug=1 to the URL.
+    let DEBUG_EMAIL = (new URLSearchParams(location.search).has('debug')) ||
+                      (localStorage.getItem('debugEmail') === '1');
+    const debugLog = (...args) => { if (DEBUG_EMAIL) console.log('[EmailDebug]', ...args); };
+    window.toggleEmailDebug = () => { 
+        DEBUG_EMAIL = !DEBUG_EMAIL; 
+        localStorage.setItem('debugEmail', DEBUG_EMAIL ? '1' : '0'); 
+        console.log('Email debug', DEBUG_EMAIL ? 'ENABLED' : 'DISABLED');
+    };
+    window._lastEmailDebug = {};
+    
+    // Graceful global error visibility for debugging
+    window.addEventListener('unhandledrejection', (e) => {
+        debugLog('Unhandled promise rejection:', e.reason);
+    });
+    window.addEventListener('error', (e) => {
+        debugLog('Window error:', e.message || e.error);
+    });
 
+    const sendEmail = async (to, subject, htmlBody) => {
+      const VPS_API_URL = 'https://email.th3va.com/send-email';
+      const YOUR_API_KEY = '83648:$/);&;84$:&;73638($'; // Keep in sync with your VPS .env
+      
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 15000);
+      const reqBody = { to, subject, htmlBody };
+
+      window._lastEmailDebug = { step: 'sending', to, subject, htmlPreview: (htmlBody||'').slice(0, 400) };
+      debugLog('Preparing to send email via VPS…', { url: VPS_API_URL, headers: ['Content-Type','x-api-key'], to, subject });
       try {
         const response = await fetch(VPS_API_URL, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
-            'x-api-key': YOUR_API_KEY, // Security key
+            'x-api-key': YOUR_API_KEY,
           },
-          body: JSON.stringify({
-            to: to,
-            subject: subject,
-            htmlBody: htmlBody,
-          }),
+          body: JSON.stringify(reqBody),
+          signal: controller.signal,
+          cache: 'no-store',
         });
 
+        const raw = await response.text();
+        debugLog('Email service raw response (first 500 chars):', raw.slice(0, 500));
+
+        let data = null;
+        try { data = JSON.parse(raw); } catch (e) { /* not JSON, keep raw */ }
+
         if (!response.ok) {
-          // If the server responded with an error, log it
-          const errorData = await response.json();
-          throw new Error(errorData.error || 'Server responded with an error');
+          const msg = (data && (data.error || data.message)) ? (data.error || data.message) : raw;
+          window._lastEmailDebug = { step: 'failed', status: response.status, statusText: response.statusText, body: raw };
+          throw new Error('Email service HTTP ' + response.status + ' ' + response.statusText + ' — ' + (msg ? String(msg).slice(0, 300) : 'Unknown error'));
         }
 
-        console.log("Email request sent to VPS successfully.");
+        window._lastEmailDebug = { step: 'ok', status: response.status, body: raw };
+        debugLog('Email request completed successfully.', { status: response.status, body: raw });
         showNotification(`Email notification sent to ${to}.`, "success");
-
+        return true;
       } catch (error) {
-        console.error("Failed to send email via VPS:", error);
-        // Notify the admin that the main task (e.g., approval) worked, but the email failed
+        debugLog('Failed to send email via VPS:', error);
         showNotification("Action successful, but failed to send email notification.", "error");
+        return false;
+      } finally {
+        clearTimeout(timeoutId);
       }
     };
+;
 
 
     // --- Voice Search Implementation ---
