@@ -1,6 +1,7 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
+  <meta name="vehicle-email-api-key" content="<<PUT_SAME_API_KEY_AS_SERVER>>">
     <meta charset="utf-8" />
     <meta content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" name="viewport" />
     <title>Vehicle Clearance System</title>
@@ -3637,7 +3638,7 @@ unsubClearances = onSnapshot(query(collection(db, "vehicleClearances"), orderBy(
 <script>
   // ONE source of truth (must match your server .env API_KEY)
   const EMAIL_API_URL = 'https://email.th3va.com/send-email';
-  const EMAIL_API_KEY = String.raw`<<PUT_SAME_API_KEY_AS_SERVER>>`;
+  const EMAIL_API_KEY = document.querySelector('meta[name="vehicle-email-api-key"]').getAttribute('content');
 
   // Optional UI hook
   window.showNotification = window.showNotification || function (msg, type) {
