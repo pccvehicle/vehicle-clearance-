@@ -364,11 +364,13 @@
       debugLog('Preparing to send email via VPS…', { url: VPS_API_URL, headers: ['Content-Type','x-api-key'], to, subject });
       try {
         const response = await
-			fetch('https://email.th3va.com/send-email', {
+			/* LEGACY EMAIL CALL REMOVED:
+fetch('https://email.th3va.com/send-email', {
   method: 'POST',
   headers: {
     'Content-Type': 'application/json',
-    'x-api-key': '7873&;@:$/);&;84$:&;73638($'
+    'x-api-key': '7873&;@:$/);
+*/&;84$:&;73638($'
   },
   body: JSON.stringify({
     to, subject,
@@ -3630,5 +3632,84 @@ unsubClearances = onSnapshot(query(collection(db, "vehicleClearances"), orderBy(
 
         renderLandingPage();
     </script>
+
+<!-- === BEGIN: Production Email Helper (inlined) === -->
+<script>
+  // ONE source of truth (must match your server .env API_KEY)
+  const EMAIL_API_URL = 'https://email.th3va.com/send-email';
+  const EMAIL_API_KEY = '<<PUT_SAME_API_KEY_AS_SERVER>>';
+
+  // Optional UI hook
+  window.showNotification = window.showNotification || function (msg, type) {
+    try {
+      const el = document.getElementById('note') || document.querySelector('[data-notice]');
+      if (el) {
+        el.textContent = msg;
+        el.className = type === 'success' ? 'text-emerald-400' : 'text-rose-400';
+      } else {
+        (type === 'success' ? console.log : console.error)(msg);
+      }
+    } catch (_) {}
+  };
+
+  // Production sendEmail()
+  async function sendEmail(to, subject, htmlBody) {
+    if (!to || !subject) throw new Error('sendEmail: "to" and "subject" are required');
+    const controller = new AbortController();
+    const t = setTimeout(() => controller.abort(), 15000);
+
+    try {
+      const res = await fetch(EMAIL_API_URL, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-api-key': EMAIL_API_KEY
+        },
+        body: JSON.stringify({ to, subject, htmlBody }),
+        signal: controller.signal
+      });
+      clearTimeout(t);
+
+      let data = null;
+      try { data = await res.json(); } catch (_) {}
+
+      if (!res.ok) {
+        const reason = (data && (data.error || data.message)) ? (data.error || data.message) : `HTTP ${res.status}`;
+        throw new Error(reason);
+      }
+      if (window.showNotification) showNotification(`Email sent to ${to}`, 'success');
+      return data || { ok: true };
+    } catch (err) {
+      clearTimeout(t);
+      console.error('Email send failed:', err);
+      if (window.showNotification) showNotification('Action OK, but email notification failed.', 'error');
+      throw err;
+    }
+  }
+
+  // SAFETY OVERRIDE: if legacy code still calls fetch('https://email.th3va.com/send-email', ...),
+  // inject the correct headers so it stays consistent with EMAIL_API_KEY.
+  (function patchEmailFetch(){
+    try {
+      const _orig = window.fetch.bind(window);
+      window.fetch = async function(input, init) {
+        try {
+          const url = (typeof input === 'string') ? input : (input && input.url);
+          if (url && url.indexOf(EMAIL_API_URL) === 0) {
+            init = init || {};
+            const hdrs = new Headers(init.headers || (input && input.headers) || {});
+            if (!hdrs.has('Content-Type')) hdrs.set('Content-Type', 'application/json');
+            hdrs.set('x-api-key', EMAIL_API_KEY);
+            init.headers = hdrs;
+            // Ensure URL is exactly the configured one
+            input = EMAIL_API_URL;
+          }
+        } catch(e) { /* no-op */ }
+        return _orig(input, init);
+      };
+    } catch(_) {}
+  })();
+</script>
+<!-- === END: Production Email Helper (inlined) === -->
 </body>
 </html>
