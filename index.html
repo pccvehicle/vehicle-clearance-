@@ -388,6 +388,26 @@ async function sendEmailRejected(to, name) {
     <div id="app-root"></div>
     <script type="module">
 
+// Safe binder: define once on window
+if (typeof window.__bindVCAliases !== "function") {
+  window.__bindVCAliases = function () {
+    try {
+      // if admin renderer missing but user dashboard exists, alias dynamically
+      if (typeof window.renderAdminDashboard !== 'function' && typeof window.renderUserDashboard === 'function') {
+        window.renderAdminDashboard = window.renderUserDashboard;
+      }
+      // expose current locals (if any) as globals
+      if (typeof window.renderLandingPage !== 'function' && typeof renderLandingPage === 'function') {
+        window.renderLandingPage = renderLandingPage;
+      }
+      if (typeof window.initializeVoiceRecognition !== 'function' && typeof initializeVoiceRecognition === 'function') {
+        window.initializeVoiceRecognition = initializeVoiceRecognition;
+      }
+    } catch (e) { console.warn('__bindVCAliases error', e); }
+  };
+}
+
+
 // === Guaranteed safe stubs (added) ===
 if (typeof window !== 'undefined') {
   if (typeof window.renderLandingPage !== "function") {
@@ -468,23 +488,15 @@ if (typeof window !== 'undefined') {
   };
 })();
 
-function __bindVCAliases() {
-  try {
-    if (typeof window.renderUserDashboard === 'function' && typeof window.renderAdminDashboard === 'function') {
-      // Prefer existing robust proxy; no-op here because proxy already forwards
-    }
-  } catch(e){}
+// removed duplicate __bindVCAliases
+} catch(e){}
 }
 // Call binder immediately to catch early calls
 __bindVCAliases();
 // removed shadowing let-decls
 // Provide runtime aliasing to existing functions when available
-function __bindVCAliases() {
-  if (typeof window !== 'undefined') {
-    if (!renderAdminDashboard && typeof renderUserDashboard === 'function') {
-      renderAdminDashboard = renderUserDashboard;
-    }
-    if (typeof renderLandingPage === 'function') window.renderLandingPage = renderLandingPage;
+// removed duplicate __bindVCAliases
+if (typeof renderLandingPage === 'function') window.renderLandingPage = renderLandingPage;
     if (typeof initializeVoiceRecognition === 'function') window.initializeVoiceRecognition = initializeVoiceRecognition;
     if (typeof renderAdminDashboard === 'function') window.renderAdminDashboard = renderAdminDashboard;
   }
