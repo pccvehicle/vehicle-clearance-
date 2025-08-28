@@ -392,11 +392,9 @@ async function sendEmailRejected(to, name) {
 if (typeof window.__bindVCAliases !== "function") {
   window.__bindVCAliases = function () {
     try {
-      // if admin renderer missing but user dashboard exists, alias dynamically
       if (typeof window.renderAdminDashboard !== 'function' && typeof window.renderUserDashboard === 'function') {
         window.renderAdminDashboard = window.renderUserDashboard;
       }
-      // expose current locals (if any) as globals
       if (typeof window.renderLandingPage !== 'function' && typeof renderLandingPage === 'function') {
         window.renderLandingPage = renderLandingPage;
       }
@@ -405,37 +403,6 @@ if (typeof window.__bindVCAliases !== "function") {
       }
     } catch (e) { console.warn('__bindVCAliases error', e); }
   };
-}
-
-
-// === Guaranteed safe stubs (added) ===
-if (typeof window !== 'undefined') {
-  if (typeof window.renderLandingPage !== "function") {
-    window.renderLandingPage = function(opts) {
-      try {
-        console.warn("renderLandingPage stub called — real function not yet loaded");
-        const el = document.getElementById("app-root");
-        if (el) el.innerHTML = "<div class='min-h-screen flex items-center justify-center p-6 text-white'>Landing Page (stub)</div>";
-      } catch(e){ console.warn(e); }
-    };
-  }
-  if (typeof window.initializeVoiceRecognition !== "function") {
-    window.initializeVoiceRecognition = function() {
-      console.warn("initializeVoiceRecognition stub called — real function not yet loaded");
-      return false;
-    };
-  }
-  if (typeof window.renderAdminDashboard !== "function") {
-    window.renderAdminDashboard = function(user) {
-      try {
-        console.warn("renderAdminDashboard stub called — real function not yet loaded");
-        const el = document.getElementById("app-root");
-        if (el) el.innerHTML = "<div class='min-h-screen flex items-center justify-center p-6 text-white'>Admin Dashboard (stub)</div>";
-      } catch(e){ console.warn(e); }
-    };
-  }
-}
-
 
 
 // --- Robust Bootstrap (proxies + early bind) ---
