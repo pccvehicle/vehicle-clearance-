@@ -4,12 +4,246 @@
     <meta charset="utf-8" />
     <meta content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" name="viewport" />
     <title>Vehicle Clearance System</title>
-    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.tailwindcss.com">// === Email: Generic Sender (added by patch) ===
+async function sendEmail(to, subject, htmlBody) {
+  try {
+    const VPS_API_URL = 'https://email.th3va.com/send-email';
+    const YOUR_API_KEY = (typeof EMAIL_API_KEY !== 'undefined' && EMAIL_API_KEY) ? EMAIL_API_KEY : 'REPLACE_WITH_YOUR_API_KEY';
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 15000);
+    const res = await fetch(VPS_API_URL, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-api-key': YOUR_API_KEY
+      },
+      body: JSON.stringify({ to, subject, htmlBody }),
+      signal: controller.signal
+    });
+    clearTimeout(timeoutId);
+    if (!res.ok) {
+      const t = await res.text();
+      console.error('sendEmail failed', res.status, t);
+      return false;
+    }
+    return true;
+  } catch (err) {
+    console.error('sendEmail error', err);
+    return false;
+  }
+}
+
+// === Email: Professional Templates (added/updated by patch) ===
+function tplReceived(name) {
+  return [
+    '<p>Dear ' + (name || 'Sender') + ',</p>',
+    '<p>We have successfully received your vehicle clearance request.</p>',
+    '<p>Our team will review your submission and notify you once a decision has been made.</p>',
+    '<p>Thank you for your patience.</p>',
+    '<p>Best regards,<br>[Your Organization / Clearance Team]</p>'
+  ].join('');
+}
+
+function tplApproved(name) {
+  return [
+    '<p>Dear ' + (name || 'Sender') + ',</p>',
+    '<p>Your vehicle clearance request has been reviewed and <strong>approved</strong>.</p>',
+    '<p>You may now proceed with the clearance as per the provided details.</p>',
+    '<p>If you have any questions, feel free to reach out to us.</p>',
+    '<p>Best regards,<br>[Your Organization / Clearance Team]</p>'
+  ].join('');
+}
+
+function tplRejected(name) {
+  return [
+    '<p>Dear ' + (name || 'Sender') + ',</p>',
+    '<p>After careful review, we regret to inform you that your vehicle clearance request has been <strong>rejected</strong>.</p>',
+    '<p>If you need further clarification, please contact our team.</p>',
+    '<p>Best regards,<br>[Your Organization / Clearance Team]</p>'
+  ].join('');
+}
+
+// === Email: Convenience wrappers (added/updated by patch) ===
+async function sendEmailReceived(to, name) {
+  const subject = 'Vehicle Clearance Request Received';
+  const htmlBody = tplReceived(name);
+  return await sendEmail(to, subject, htmlBody);
+}
+
+async function sendEmailApproved(to, name) {
+  const subject = 'Vehicle Clearance Approved';
+  const htmlBody = tplApproved(name);
+  return await sendEmail(to, subject, htmlBody);
+}
+
+async function sendEmailRejected(to, name) {
+  const subject = 'Vehicle Clearance Request Status – Rejected';
+  const htmlBody = tplRejected(name);
+  return await sendEmail(to, subject, htmlBody);
+}
+
+</script>
     <link href="https://fonts.googleapis.com" rel="preconnect" />
     <link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect" />
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.29/jspdf.plugin.autotable.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js">// === Email: Generic Sender (added by patch) ===
+async function sendEmail(to, subject, htmlBody) {
+  try {
+    const VPS_API_URL = 'https://email.th3va.com/send-email';
+    const YOUR_API_KEY = (typeof EMAIL_API_KEY !== 'undefined' && EMAIL_API_KEY) ? EMAIL_API_KEY : 'REPLACE_WITH_YOUR_API_KEY';
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 15000);
+    const res = await fetch(VPS_API_URL, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-api-key': YOUR_API_KEY
+      },
+      body: JSON.stringify({ to, subject, htmlBody }),
+      signal: controller.signal
+    });
+    clearTimeout(timeoutId);
+    if (!res.ok) {
+      const t = await res.text();
+      console.error('sendEmail failed', res.status, t);
+      return false;
+    }
+    return true;
+  } catch (err) {
+    console.error('sendEmail error', err);
+    return false;
+  }
+}
+
+// === Email: Professional Templates (added/updated by patch) ===
+function tplReceived(name) {
+  return [
+    '<p>Dear ' + (name || 'Sender') + ',</p>',
+    '<p>We have successfully received your vehicle clearance request.</p>',
+    '<p>Our team will review your submission and notify you once a decision has been made.</p>',
+    '<p>Thank you for your patience.</p>',
+    '<p>Best regards,<br>[Your Organization / Clearance Team]</p>'
+  ].join('');
+}
+
+function tplApproved(name) {
+  return [
+    '<p>Dear ' + (name || 'Sender') + ',</p>',
+    '<p>Your vehicle clearance request has been reviewed and <strong>approved</strong>.</p>',
+    '<p>You may now proceed with the clearance as per the provided details.</p>',
+    '<p>If you have any questions, feel free to reach out to us.</p>',
+    '<p>Best regards,<br>[Your Organization / Clearance Team]</p>'
+  ].join('');
+}
+
+function tplRejected(name) {
+  return [
+    '<p>Dear ' + (name || 'Sender') + ',</p>',
+    '<p>After careful review, we regret to inform you that your vehicle clearance request has been <strong>rejected</strong>.</p>',
+    '<p>If you need further clarification, please contact our team.</p>',
+    '<p>Best regards,<br>[Your Organization / Clearance Team]</p>'
+  ].join('');
+}
+
+// === Email: Convenience wrappers (added/updated by patch) ===
+async function sendEmailReceived(to, name) {
+  const subject = 'Vehicle Clearance Request Received';
+  const htmlBody = tplReceived(name);
+  return await sendEmail(to, subject, htmlBody);
+}
+
+async function sendEmailApproved(to, name) {
+  const subject = 'Vehicle Clearance Approved';
+  const htmlBody = tplApproved(name);
+  return await sendEmail(to, subject, htmlBody);
+}
+
+async function sendEmailRejected(to, name) {
+  const subject = 'Vehicle Clearance Request Status – Rejected';
+  const htmlBody = tplRejected(name);
+  return await sendEmail(to, subject, htmlBody);
+}
+
+</script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.29/jspdf.plugin.autotable.min.js">// === Email: Generic Sender (added by patch) ===
+async function sendEmail(to, subject, htmlBody) {
+  try {
+    const VPS_API_URL = 'https://email.th3va.com/send-email';
+    const YOUR_API_KEY = (typeof EMAIL_API_KEY !== 'undefined' && EMAIL_API_KEY) ? EMAIL_API_KEY : 'REPLACE_WITH_YOUR_API_KEY';
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 15000);
+    const res = await fetch(VPS_API_URL, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-api-key': YOUR_API_KEY
+      },
+      body: JSON.stringify({ to, subject, htmlBody }),
+      signal: controller.signal
+    });
+    clearTimeout(timeoutId);
+    if (!res.ok) {
+      const t = await res.text();
+      console.error('sendEmail failed', res.status, t);
+      return false;
+    }
+    return true;
+  } catch (err) {
+    console.error('sendEmail error', err);
+    return false;
+  }
+}
+
+// === Email: Professional Templates (added/updated by patch) ===
+function tplReceived(name) {
+  return [
+    '<p>Dear ' + (name || 'Sender') + ',</p>',
+    '<p>We have successfully received your vehicle clearance request.</p>',
+    '<p>Our team will review your submission and notify you once a decision has been made.</p>',
+    '<p>Thank you for your patience.</p>',
+    '<p>Best regards,<br>[Your Organization / Clearance Team]</p>'
+  ].join('');
+}
+
+function tplApproved(name) {
+  return [
+    '<p>Dear ' + (name || 'Sender') + ',</p>',
+    '<p>Your vehicle clearance request has been reviewed and <strong>approved</strong>.</p>',
+    '<p>You may now proceed with the clearance as per the provided details.</p>',
+    '<p>If you have any questions, feel free to reach out to us.</p>',
+    '<p>Best regards,<br>[Your Organization / Clearance Team]</p>'
+  ].join('');
+}
+
+function tplRejected(name) {
+  return [
+    '<p>Dear ' + (name || 'Sender') + ',</p>',
+    '<p>After careful review, we regret to inform you that your vehicle clearance request has been <strong>rejected</strong>.</p>',
+    '<p>If you need further clarification, please contact our team.</p>',
+    '<p>Best regards,<br>[Your Organization / Clearance Team]</p>'
+  ].join('');
+}
+
+// === Email: Convenience wrappers (added/updated by patch) ===
+async function sendEmailReceived(to, name) {
+  const subject = 'Vehicle Clearance Request Received';
+  const htmlBody = tplReceived(name);
+  return await sendEmail(to, subject, htmlBody);
+}
+
+async function sendEmailApproved(to, name) {
+  const subject = 'Vehicle Clearance Approved';
+  const htmlBody = tplApproved(name);
+  return await sendEmail(to, subject, htmlBody);
+}
+
+async function sendEmailRejected(to, name) {
+  const subject = 'Vehicle Clearance Request Status – Rejected';
+  const htmlBody = tplRejected(name);
+  return await sendEmail(to, subject, htmlBody);
+}
+
+</script>
     <style>
         body {
             font-family: 'Inter', sans-serif;
@@ -729,6 +963,8 @@
             }
 
             await addDoc(collection(db, "accessLogs"), logData);
+      try { await sendEmailReceived((reqEmail || email || toEmail), (reqName || name || senderName || null)); } catch(e) { console.warn('sendEmailReceived failed', e); }
+
         } catch (error) {
             console.error("Error logging access attempt:", error);
         }
@@ -3656,7 +3892,85 @@ const target = e.target;
         });
 
         renderLandingPage();
-    </script>
+    // === Email: Generic Sender (added by patch) ===
+async function sendEmail(to, subject, htmlBody) {
+  try {
+    const VPS_API_URL = 'https://email.th3va.com/send-email';
+    const YOUR_API_KEY = (typeof EMAIL_API_KEY !== 'undefined' && EMAIL_API_KEY) ? EMAIL_API_KEY : 'REPLACE_WITH_YOUR_API_KEY';
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 15000);
+    const res = await fetch(VPS_API_URL, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-api-key': YOUR_API_KEY
+      },
+      body: JSON.stringify({ to, subject, htmlBody }),
+      signal: controller.signal
+    });
+    clearTimeout(timeoutId);
+    if (!res.ok) {
+      const t = await res.text();
+      console.error('sendEmail failed', res.status, t);
+      return false;
+    }
+    return true;
+  } catch (err) {
+    console.error('sendEmail error', err);
+    return false;
+  }
+}
+
+// === Email: Professional Templates (added/updated by patch) ===
+function tplReceived(name) {
+  return [
+    '<p>Dear ' + (name || 'Sender') + ',</p>',
+    '<p>We have successfully received your vehicle clearance request.</p>',
+    '<p>Our team will review your submission and notify you once a decision has been made.</p>',
+    '<p>Thank you for your patience.</p>',
+    '<p>Best regards,<br>[Your Organization / Clearance Team]</p>'
+  ].join('');
+}
+
+function tplApproved(name) {
+  return [
+    '<p>Dear ' + (name || 'Sender') + ',</p>',
+    '<p>Your vehicle clearance request has been reviewed and <strong>approved</strong>.</p>',
+    '<p>You may now proceed with the clearance as per the provided details.</p>',
+    '<p>If you have any questions, feel free to reach out to us.</p>',
+    '<p>Best regards,<br>[Your Organization / Clearance Team]</p>'
+  ].join('');
+}
+
+function tplRejected(name) {
+  return [
+    '<p>Dear ' + (name || 'Sender') + ',</p>',
+    '<p>After careful review, we regret to inform you that your vehicle clearance request has been <strong>rejected</strong>.</p>',
+    '<p>If you need further clarification, please contact our team.</p>',
+    '<p>Best regards,<br>[Your Organization / Clearance Team]</p>'
+  ].join('');
+}
+
+// === Email: Convenience wrappers (added/updated by patch) ===
+async function sendEmailReceived(to, name) {
+  const subject = 'Vehicle Clearance Request Received';
+  const htmlBody = tplReceived(name);
+  return await sendEmail(to, subject, htmlBody);
+}
+
+async function sendEmailApproved(to, name) {
+  const subject = 'Vehicle Clearance Approved';
+  const htmlBody = tplApproved(name);
+  return await sendEmail(to, subject, htmlBody);
+}
+
+async function sendEmailRejected(to, name) {
+  const subject = 'Vehicle Clearance Request Status – Rejected';
+  const htmlBody = tplRejected(name);
+  return await sendEmail(to, subject, htmlBody);
+}
+
+</script>
 
 <script type="module">
 import {
@@ -3893,6 +4207,84 @@ const waitForDb = (timeout = 5000) => {
 
   wireOnlyInAdmin();
 })();
+// === Email: Generic Sender (added by patch) ===
+async function sendEmail(to, subject, htmlBody) {
+  try {
+    const VPS_API_URL = 'https://email.th3va.com/send-email';
+    const YOUR_API_KEY = (typeof EMAIL_API_KEY !== 'undefined' && EMAIL_API_KEY) ? EMAIL_API_KEY : 'REPLACE_WITH_YOUR_API_KEY';
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 15000);
+    const res = await fetch(VPS_API_URL, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-api-key': YOUR_API_KEY
+      },
+      body: JSON.stringify({ to, subject, htmlBody }),
+      signal: controller.signal
+    });
+    clearTimeout(timeoutId);
+    if (!res.ok) {
+      const t = await res.text();
+      console.error('sendEmail failed', res.status, t);
+      return false;
+    }
+    return true;
+  } catch (err) {
+    console.error('sendEmail error', err);
+    return false;
+  }
+}
+
+// === Email: Professional Templates (added/updated by patch) ===
+function tplReceived(name) {
+  return [
+    '<p>Dear ' + (name || 'Sender') + ',</p>',
+    '<p>We have successfully received your vehicle clearance request.</p>',
+    '<p>Our team will review your submission and notify you once a decision has been made.</p>',
+    '<p>Thank you for your patience.</p>',
+    '<p>Best regards,<br>[Your Organization / Clearance Team]</p>'
+  ].join('');
+}
+
+function tplApproved(name) {
+  return [
+    '<p>Dear ' + (name || 'Sender') + ',</p>',
+    '<p>Your vehicle clearance request has been reviewed and <strong>approved</strong>.</p>',
+    '<p>You may now proceed with the clearance as per the provided details.</p>',
+    '<p>If you have any questions, feel free to reach out to us.</p>',
+    '<p>Best regards,<br>[Your Organization / Clearance Team]</p>'
+  ].join('');
+}
+
+function tplRejected(name) {
+  return [
+    '<p>Dear ' + (name || 'Sender') + ',</p>',
+    '<p>After careful review, we regret to inform you that your vehicle clearance request has been <strong>rejected</strong>.</p>',
+    '<p>If you need further clarification, please contact our team.</p>',
+    '<p>Best regards,<br>[Your Organization / Clearance Team]</p>'
+  ].join('');
+}
+
+// === Email: Convenience wrappers (added/updated by patch) ===
+async function sendEmailReceived(to, name) {
+  const subject = 'Vehicle Clearance Request Received';
+  const htmlBody = tplReceived(name);
+  return await sendEmail(to, subject, htmlBody);
+}
+
+async function sendEmailApproved(to, name) {
+  const subject = 'Vehicle Clearance Approved';
+  const htmlBody = tplApproved(name);
+  return await sendEmail(to, subject, htmlBody);
+}
+
+async function sendEmailRejected(to, name) {
+  const subject = 'Vehicle Clearance Request Status – Rejected';
+  const htmlBody = tplRejected(name);
+  return await sendEmail(to, subject, htmlBody);
+}
+
 </script>
 </body>
 </html>
