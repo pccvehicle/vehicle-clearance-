@@ -1354,7 +1354,7 @@
                     <form id="track-request-form" class="space-y-3">
                         <label class="text-sm font-medium text-slate-400">Or, track an existing request.</label>
                         <div class="flex gap-2">
-                            <input id="track-id-input" oninput="this.value=this.value.replace(/\D/g, '')" class="mobile-input block w-full px-4 py-2 bg-slate-900/70 border border-slate-700 rounded-lg text-white placeholder-slate-500 focus:ring-blue-500 focus:border-blue-500" placeholder="Enter Vehicle Number" value="${vehicleNumber}" />
+                            <input id="track-id-input" oninput="this.value=this.value.toUpperCase().replace(/[^A-Z0-9]/g, '')" class="mobile-input block w-full px-4 py-2 bg-slate-900/70 border border-slate-700 rounded-lg text-white placeholder-slate-500 focus:ring-blue-500 focus:border-blue-500" placeholder="Enter Vehicle Number" value="${vehicleNumber}" / style="text-transform: uppercase;">
                             <button type="submit" class="flex items-center justify-center px-4 py-2 rounded-lg text-white bg-slate-700 hover:bg-slate-600 transition-colors">
                                 <span class="w-5 h-5">${icons.search}</span>
                             </button>
@@ -1494,7 +1494,7 @@
                     
                     <div>
                         <label class="text-sm font-medium text-slate-300">Vehicle Number</label>
-                        <input name="vehicleNumber" oninput="this.value=this.value.replace(/\D/g, '')" class="mobile-input mt-1 w-full p-3 bg-slate-900/70 border border-slate-700 rounded-lg text-white" required />
+                        <input name="vehicleNumber" oninput="this.value=this.value.toUpperCase().replace(/[^A-Z0-9]/g, '')" class="mobile-input mt-1 w-full p-3 bg-slate-900/70 border border-slate-700 rounded-lg text-white" required / style="text-transform: uppercase;">
                     </div>
 
                     <div>
@@ -3721,7 +3721,7 @@ const waitForDb = (timeout = 5000) => {
           <div class="p-3 sm:p-4 space-y-3 flex-grow overflow-y-auto">
             <label class="text-sm font-medium text-gray-600 dark:text-gray-300">Vehicle Number</label>
             <div class="flex gap-2">
-              <input id="ags-input" class="flex-1 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-900 dark:text-white px-3 py-2" placeholder="Enter vehicle number..." oninput="this.value=this.value.replace(/\D/g, '')">
+              <input id="ags-input" class="flex-1 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-900 dark:text-white px-3 py-2" placeholder="Enter vehicle number..." oninput="this.value=this.value.toUpperCase().replace(/[^A-Z0-9]/g, '')" style="text-transform: uppercase;">
             </div>
             <p class="text-xs text-gray-500 dark:text-gray-400">Exact match first. Partial (prefix) matches follow.</p>
             <div id="ags-results" class="mt-2 space-y-4"></div>
