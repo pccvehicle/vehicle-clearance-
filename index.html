@@ -3648,22 +3648,17 @@ const renderRequestsList = () => {
   <span aria-hidden="true">🔎</span><span class="hide-on-narrow">Search All</span>
 </button>
 
-<script>
+
+<script type="module">
 (() => {
-  // Guard to prevent double-inject
   if (window.__ADMIN_GLOBAL_SEARCH_WIRED__) return;
   window.__ADMIN_GLOBAL_SEARCH_WIRED__ = true;
 
-  // Minimal helpers if host app doesn't provide them (soft fallbacks)
-  const noop = () => {};
+  import {
+    getDocs, collection, query, where, orderBy, startAt, endAt, limit
+  } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+
   const has = (k) => typeof window[k] !== 'undefined';
-
-  // Spinner CSS (only once)
-  const style = document.createElement('style');
-  style.textContent = `.spinner{border-radius:9999px;animation:agspin 1s linear infinite}@keyframes agspin{to{transform:rotate(360deg)}}`;
-  document.head.appendChild(style);
-
-  // Shims/fallbacks
   window.showNotification = has('showNotification') ? window.showNotification
     : (msg, type='info') => { try { console.log(`[${type}]`, msg); } catch(e){} };
   window.formatVehicleNumber = has('formatVehicleNumber') ? window.formatVehicleNumber
@@ -3679,7 +3674,6 @@ const renderRequestsList = () => {
   window.normalizePhoneNumberForWhatsApp = has('normalizePhoneNumberForWhatsApp') ? window.normalizePhoneNumberForWhatsApp
     : (p) => (p||'').replace(/\D+/g,'');
 
-  // Icons shims
   window.icons = window.icons || {};
   icons.search = icons.search || '🔎';
   icons.mic = icons.mic || '🎤';
@@ -3687,10 +3681,8 @@ const renderRequestsList = () => {
   icons.whatsapp = icons.whatsapp || '🟢';
   icons.download = icons.download || '📋';
 
-  // Voice start shim (uses existing if present)
   window.startVoiceSearch = has('startVoiceSearch') ? window.startVoiceSearch
     : (inputEl) => {
-        // basic webkitSpeechRecognition fallback
         try {
           const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
           if (!SR) return showNotification('Voice unsupported on this device', 'error');
@@ -3706,7 +3698,6 @@ const renderRequestsList = () => {
         } catch(e){ showNotification('Voice init failed', 'error'); }
       };
 
-  // === Modal renderer ===
   function renderAdminGlobalSearchModal() {
     const host = document.getElementById('admin-global-search-modal');
     if (!host) return;
@@ -3751,10 +3742,8 @@ const renderRequestsList = () => {
     };
   }
 
-  // === Firestore Query logic ===
   async function searchVehiclesGlobal(PLATE){
     if (!window.db) throw new Error('Firestore not initialized (db missing)');
-    const { getDocs, collection, query, where, orderBy, startAt, endAt, limit } = await import('https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js');
     const results = { exact:{vehicleClearances:[],clearanceRequests:[],vvips:[]}, partial:{vehicleClearances:[],clearanceRequests:[],vvips:[]} };
 
     const exactOn = async (coll) => {
@@ -3804,7 +3793,6 @@ const renderRequestsList = () => {
     const plate = formatVehicleNumber(rec.vehicleNumber||'N/A');
     const right = (()=>{
       if (rec._coll==='vehicleClearances'){
-        // expiry status
         let status = '—';
         try{
           const now = Date.now();
@@ -3847,7 +3835,10 @@ const renderRequestsList = () => {
     if (btn) btn.onclick = () => renderAdminGlobalSearchModal();
   }
 
-  // Try to auto-wire after DOM ready
+  const style = document.createElement('style');
+  style.textContent = `.spinner{border-radius:9999px;animation:agspin 1s linear infinite}@keyframes agspin{to{transform:rotate(360deg)}}`;
+  document.head.appendChild(style);
+
   if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', wireAdminGlobalSearch);
   } else {
@@ -3855,5 +3846,6 @@ const renderRequestsList = () => {
   }
 })();
 </script>
+
 </body>
 </html>
