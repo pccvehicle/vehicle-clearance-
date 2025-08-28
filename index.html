@@ -235,6 +235,11 @@
         .landing-solid {
             background-color: var(--logo-bg) !important;
         }
+    
+        .btn-icon-sm { width: 36px; height: 36px; display:flex; align-items:center; justify-content:center; border-radius:0.5rem; }
+        .btn-icon-sm svg { width: 18px; height: 18px; }
+        .sticky-topbar { position: sticky; top: 0; z-index: 40; }
+        .sticky-manage { position: sticky; top: 52px; z-index: 30; } /* below topbar */
     </style>
 </head>
 <body class="">
@@ -898,6 +903,17 @@
         whatsapp: `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="currentColor"><path d="M.057 24l1.687-6.163c-1.041-1.804-1.588-3.849-1.587-5.946.003-6.556 5.338-11.891 11.893-11.891 3.181.001 6.167 1.24 8.413 3.488 2.245 2.248 3.481 5.236 3.48 8.414-.003 6.557-5.338 11.892-11.894 11.892-1.99-.001-3.951-.5-5.688-1.448l-6.305 1.654zm6.597-3.807c1.676.995 3.276 1.591 5.392 1.592 5.448 0 9.886-4.434 9.889-9.885.002-5.462-4.415-9.89-9.881-9.892-5.452 0-9.887 4.434-9.889 9.886-.001 2.267.655 4.398 1.908 6.161l.217.324-1.251 4.565 4.654-1.225.308.212z"/></svg>`
     };
         // — Dashboard Setup —
+/* Admin Header Actions */
+        document.addEventListener('click', (e)=>{
+            const t = e.target.closest('button');
+            if(!t) return;
+            if (t.id === 'admin-global-search-btn') {
+                if (typeof openAdminSearchModal === 'function') openAdminSearchModal();
+            } else if (t.id === 'admin-exit-btn') {
+                performSecureLogout();
+            }
+        });
+    
         const showUserDashboard = (user) => {
             appRoot.innerHTML = `<div class="min-h-screen flex items-center justify-center"><div class="animate-spin rounded-full h-16 w-16 border-t-4 border-b-4 border-blue-500"></div></div>`;
             document.body.classList.remove('dark-theme-bg');
@@ -1869,8 +1885,7 @@
                         <div id="requests-list" class="space-y-4"></div>
                     </section>
                     <section>
-                        <div class="flex flex-wrap gap-4 justify-between items-center mb-6">
-                            <h2 class="text-2xl font-semibold text-gray-800 dark:text-gray-100">Manage Clearances</h2>
+                        <div class="sticky-manage bg-gray-800/80 backdrop-blur-sm border-b border-gray-700">\1
                             <div class="flex gap-2 flex-wrap">
                                <button id="download-report-btn" class="flex items-center justify-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 mobile-button">
                                     <span class="w-5 h-5">${icons.download}</span><span class="hidden sm:inline">Download Report</span>
@@ -3710,9 +3725,9 @@ const waitForDb = (timeout = 5000) => {
             <div id="ags-results" class="mt-2 space-y-4"></div>
           </div>
           <div class="p-3 sm:p-4 border-t border-gray-200 dark:border-gray-700 flex flex-row flex-nowrap justify-end items-center gap-2 flex-shrink-0">
-              <button id="ags-search" class="whitespace-nowrap px-4 py-2 text-sm rounded-lg text-white bg-blue-600 hover:bg-blue-500 font-semibold" title="Search">Search</button>
-              <button id="ags-clear" class="whitespace-nowrap px-4 py-2 text-sm rounded-lg bg-gray-200 dark:bg-gray-600 text-gray-800 dark:text-gray-200 hover:bg-gray-300 dark:hover:bg-gray-500">Clear</button>
-              <button id="ags-exit" class="whitespace-nowrap px-4 py-2 text-sm rounded-lg bg-red-600 text-white hover:bg-red-700">Exit</button>
+              <button id="ags-search" class="btn-icon-sm whitespace-nowrap px-4 py-2 text-sm rounded-lg text-white bg-blue-600 hover:bg-blue-500 font-semibold" title="Search">Search</button>
+              <button id="ags-clear" class="btn-icon-sm whitespace-nowrap px-4 py-2 text-sm rounded-lg bg-gray-200 dark:bg-gray-600 text-gray-800 dark:text-gray-200 hover:bg-gray-300 dark:hover:bg-gray-500">Clear</button>
+              <button id="ags-exit" class="btn-icon-sm whitespace-nowrap px-4 py-2 text-sm rounded-lg bg-red-600 text-white hover:bg-red-700">Exit</button>
           </div>
         </div>
       </div>`;
