@@ -252,6 +252,13 @@
 /* [VoiceSearch] Hide legacy white mic completely */
 #greenlist-mic { display: none !important; visibility: hidden !important; }
 
+
+
+/* [VoiceSearch] Hide legacy white mic and prevent stray mics outside Greenlist */
+#greenlist-mic { display: none !important; visibility: hidden !important; }
+:root body .voice-search-btn { display: none; } /* default: hide everywhere */
+#daily-clearance-search-form .voice-search-btn { display: inline-flex; } /* allow only in Greenlist form */
+
 </style>
 </head>
 <body class="">
@@ -3912,14 +3919,16 @@ const waitForDb = (timeout = 5000) => {
 
 
 // [VoiceSearch] delegated click handler
+
 document.addEventListener("click", function(e) {
-  const btn = e.target.closest('.voice-search-btn');
+  const btn = e.target.closest('#daily-clearance-search-form .voice-search-btn');
   if (!btn) return;
   e.preventDefault();
-  const scope = btn.closest('form, .flex, .grid, .container, body');
-  const input = scope ? scope.querySelector('input[type="text"], input[type="search"], input:not([type])') : document.querySelector('input');
+  const form = document.querySelector('#daily-clearance-search-form');
+  const input = form ? (form.querySelector('#daily-clearance-search-input') || form.querySelector('input')) : null;
   if (input) { startVoiceSearch(input, btn); }
 });
+
 
 
 
