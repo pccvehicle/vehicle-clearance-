@@ -419,8 +419,7 @@ if (typeof window !== 'undefined') {
 
 
 // --- Robust Bootstrap (proxies + early bind) ---
-let renderLandingPage, initializeVoiceRecognition, renderAdminDashboard;
-
+// removed shadowing let-decls
 // Proxy that forwards if real impl is available, else shows a minimal fallback
 (function(){
   const real = {};
@@ -478,9 +477,7 @@ function __bindVCAliases() {
 }
 // Call binder immediately to catch early calls
 __bindVCAliases();
-
-let renderLandingPage, initializeVoiceRecognition, renderAdminDashboard;
-
+// removed shadowing let-decls
 // Provide runtime aliasing to existing functions when available
 function __bindVCAliases() {
   if (typeof window !== 'undefined') {
