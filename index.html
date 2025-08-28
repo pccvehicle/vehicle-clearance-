@@ -1354,7 +1354,7 @@
                     <form id="track-request-form" class="space-y-3">
                         <label class="text-sm font-medium text-slate-400">Or, track an existing request.</label>
                         <div class="flex gap-2">
-                            <input id="track-id-input" oninput="this.value=this.value.toUpperCase()" class="mobile-input block w-full px-4 py-2 bg-slate-900/70 border border-slate-700 rounded-lg text-white placeholder-slate-500 focus:ring-blue-500 focus:border-blue-500" placeholder="Enter Vehicle Number" value="${vehicleNumber}" />
+                            <input id="track-id-input" oninput="this.value=this.value.replace(/\D/g, '')" class="mobile-input block w-full px-4 py-2 bg-slate-900/70 border border-slate-700 rounded-lg text-white placeholder-slate-500 focus:ring-blue-500 focus:border-blue-500" placeholder="Enter Vehicle Number" value="${vehicleNumber}" />
                             <button type="submit" class="flex items-center justify-center px-4 py-2 rounded-lg text-white bg-slate-700 hover:bg-slate-600 transition-colors">
                                 <span class="w-5 h-5">${icons.search}</span>
                             </button>
@@ -1423,7 +1423,7 @@
                 <form id="secure-user-login-form" class="space-y-4 pt-4">
                     <div>
                         <label class="text-sm font-medium text-slate-300">User ID</label>
-                        <input type="text" name="userID" class="mobile-input block w-full px-4 py-3 bg-slate-900/70 border border-slate-700 rounded-lg text-white" placeholder="Enter your User ID" oninput="this.value=this.value.toUpperCase()" required />
+                        <input type="text" name="userID" class="mobile-input block w-full px-4 py-3 bg-slate-900/70 border border-slate-700 rounded-lg text-white" placeholder="Enter your User ID" oninput="this.value=this.value.replace(/\D/g, '')" required />
                     </div>
                     
                     <div id="location-status" class="hidden p-3 rounded-lg border border-blue-500/30 bg-blue-500/10">
@@ -1494,7 +1494,7 @@
                     
                     <div>
                         <label class="text-sm font-medium text-slate-300">Vehicle Number</label>
-                        <input name="vehicleNumber" oninput="this.value=this.value.toUpperCase()" class="mobile-input mt-1 w-full p-3 bg-slate-900/70 border border-slate-700 rounded-lg text-white" required />
+                        <input name="vehicleNumber" oninput="this.value=this.value.replace(/\D/g, '')" class="mobile-input mt-1 w-full p-3 bg-slate-900/70 border border-slate-700 rounded-lg text-white" required />
                     </div>
 
                     <div>
@@ -1812,15 +1812,11 @@
             
             <div class="mb-6 sticky top-0 bg-gray-100 dark:bg-gray-900 z-20 py-4">
               <form id="daily-clearance-search-form" class="flex gap-2">
-                <input id="daily-clearance-search-input" name="search" 
+                <input id="daily-clearance-search-input" inputmode="numeric" pattern="\d*" name="search" 
                        class="mobile-input block flex-1 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-900 dark:text-white" 
                        placeholder="Search Vehicle..." 
-                       oninput="this.value=this.value.toUpperCase()" 
-                       value="${vehicleFilter || ''}">
-                <button type="button" class="voice-search-btn mobile-button px-3 py-2 rounded-lg text-white bg-purple-600 hover:bg-purple-700 transition-colors flex-shrink-0" title="Voice">
-                  <span class="w-4 h-4">${icons.mic}</span>
-                </button>
-                <button type="reset" class="mobile-button px-3 py-2 rounded-lg text-gray-800 dark:text-gray-200 bg-gray-200 dark:bg-gray-600 hover:bg-gray-300 dark:hover:bg-gray-500 flex-shrink-0">
+                       oninput="this.value=this.value.replace(/\D/g, '')" 
+                       value="${vehicleFilter || ''}"> <button type="reset" class="mobile-button px-3 py-2 rounded-lg text-gray-800 dark:text-gray-200 bg-gray-200 dark:bg-gray-600 hover:bg-gray-300 dark:hover:bg-gray-500 flex-shrink-0">
                   Clear
                 </button>
               </form>
@@ -1926,7 +1922,7 @@
                                 <h3 class="text-lg font-semibold text-gray-800 dark:text-gray-100">Add New VVIP</h3>
                                 <div class="w-full">
                                     <label class="text-xs font-semibold text-gray-600 dark:text-gray-400">Vehicle Number</label>
-                                    <input name="vehicleNumber" oninput="this.value=this.value.toUpperCase()" class="mobile-input w-full mt-1 p-2 bg-white dark:bg-gray-700 border dark:border-gray-600 rounded-lg" required>
+                                    <input name="vehicleNumber" oninput="this.value=this.value.replace(/\D/g, '')" class="mobile-input w-full mt-1 p-2 bg-white dark:bg-gray-700 border dark:border-gray-600 rounded-lg" required>
                                 </div>
                                 <div class="w-full">
                                     <label class="text-xs font-semibold text-gray-600 dark:text-gray-400">Designation</label>
@@ -1949,7 +1945,7 @@
                                     <div class="grid grid-cols-2 gap-2">
                                         <div>
                                             <label class="text-xs font-semibold text-gray-600 dark:text-gray-400">User ID</label>
-                                            <input name="userId" oninput="this.value=this.value.toUpperCase()" class="mobile-input w-full mt-1 p-2 bg-gray-50 dark:bg-gray-700 border dark:border-gray-600 rounded text-sm" placeholder="T123456" required>
+                                            <input name="userId" oninput="this.value=this.value.replace(/\D/g, '')" class="mobile-input w-full mt-1 p-2 bg-gray-50 dark:bg-gray-700 border dark:border-gray-600 rounded text-sm" placeholder="T123456" required>
                                         </div>
                                         <div>
                                             <label class="text-xs font-semibold text-gray-600 dark:text-gray-400">Description</label>
@@ -2361,7 +2357,7 @@ const renderRequestsList = () => {
                     </div>
                     <div>
                         <label class="text-sm font-medium text-gray-700 dark:text-gray-300">Vehicle Number</label>
-                        <input name="vehicleNumber" value="${request.vehicleNumber || ''}" oninput="this.value=this.value.toUpperCase()" class="mobile-input mt-1 w-full p-3 bg-gray-50 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-900 dark:text-white" required />
+                        <input name="vehicleNumber" value="${request.vehicleNumber || ''}" oninput="this.value=this.value.replace(/\D/g, '')" class="mobile-input mt-1 w-full p-3 bg-gray-50 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-900 dark:text-white" required />
                     </div>
                     <div>
                         <label class="text-sm font-medium text-gray-700 dark:text-gray-300">Vehicle Type</label>
@@ -2449,7 +2445,7 @@ const renderRequestsList = () => {
                         </div>
                         <div>
                             <label class="text-sm font-medium text-gray-700 dark:text-gray-300">Vehicle Number</label>
-                            <input name="vehicleNumber" value="${edit?.vehicleNumber || ''}" oninput="this.value=this.value.toUpperCase()" class="mobile-input mt-1 w-full p-3 bg-gray-50 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-900 dark:text-white" required />
+                            <input name="vehicleNumber" value="${edit?.vehicleNumber || ''}" oninput="this.value=this.value.replace(/\D/g, '')" class="mobile-input mt-1 w-full p-3 bg-gray-50 dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-900 dark:text-white" required />
                         </div>
                     </div>
                      <div class="grid grid-cols-2 md:grid-cols-3 gap-4">
@@ -3708,15 +3704,15 @@ const waitForDb = (timeout = 5000) => {
           <div class="p-3 sm:p-4 space-y-3 flex-grow overflow-y-auto">
             <label class="text-sm font-medium text-gray-600 dark:text-gray-300">Vehicle Number</label>
             <div class="flex gap-2">
-              <input id="ags-input" class="flex-1 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-900 dark:text-white px-3 py-2" placeholder="Enter vehicle number..." oninput="this.value=this.value.toUpperCase()">
+              <input id="ags-input" class="flex-1 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-900 dark:text-white px-3 py-2" placeholder="Enter vehicle number..." oninput="this.value=this.value.replace(/\D/g, '')">
             </div>
             <p class="text-xs text-gray-500 dark:text-gray-400">Exact match first. Partial (prefix) matches follow.</p>
             <div id="ags-results" class="mt-2 space-y-4"></div>
           </div>
-          <div class="p-3 sm:p-4 border-t border-gray-200 dark:border-gray-700 flex justify-end items-center gap-2 flex-shrink-0">
-              <button id="ags-search" class="px-4 py-2 text-sm rounded-lg text-white bg-blue-600 hover:bg-blue-500 font-semibold" title="Search">Search</button>
-              <button id="ags-clear" class="px-4 py-2 text-sm rounded-lg bg-gray-200 dark:bg-gray-600 text-gray-800 dark:text-gray-200 hover:bg-gray-300 dark:hover:bg-gray-500">Clear</button>
-              <button id="ags-exit" class="px-4 py-2 text-sm rounded-lg bg-red-600 text-white hover:bg-red-700">Exit</button>
+          <div class="p-3 sm:p-4 border-t border-gray-200 dark:border-gray-700 flex flex-row flex-nowrap justify-end items-center gap-2 flex-shrink-0">
+              <button id="ags-search" class="whitespace-nowrap px-4 py-2 text-sm rounded-lg text-white bg-blue-600 hover:bg-blue-500 font-semibold" title="Search">Search</button>
+              <button id="ags-clear" class="whitespace-nowrap px-4 py-2 text-sm rounded-lg bg-gray-200 dark:bg-gray-600 text-gray-800 dark:text-gray-200 hover:bg-gray-300 dark:hover:bg-gray-500">Clear</button>
+              <button id="ags-exit" class="whitespace-nowrap px-4 py-2 text-sm rounded-lg bg-red-600 text-white hover:bg-red-700">Exit</button>
           </div>
         </div>
       </div>`;
@@ -3757,7 +3753,6 @@ const waitForDb = (timeout = 5000) => {
   }
 
 
-  async 
   async function searchVehiclesGlobal(PLATE){
     if(!window.db) throw new Error('Firestore not initialized (db missing)');
     // VVIPs removed from results object
