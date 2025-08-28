@@ -266,7 +266,7 @@
         getDocs,
         orderBy,
         writeBatch,
-        limit
+        limit, startAt, endAt
     } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
     // --- Configuration ---
@@ -778,7 +778,129 @@
 
     const formatVehicleNumber = (vehicleNumber) => {
         if (!vehicleNumber) return 'N/A';
-        return vehicleNumber.toUpperCase();
+        return vehicleNumber.toUpp
+
+// === Admin DB Search (vehicle number) ===
+const debounce = (fn, ms=350) => { let t; return (...args) => { clearTimeout(t); t=setTimeout(()=>fn(...args), ms); }; };
+
+const searchVehiclesInDB = async (needle) => {
+  const q = (needle || '').trim().toUpperCase();
+  const out = [];
+  if (!q) return out;
+
+  const take = 40;
+  const tryPrefix = async (collectionName) => {
+    try {
+      const coll = collection(db, collectionName);
+      // Prefer fast prefix search if index exists
+      const q1 = query(coll, orderBy('vehicleNumber'), startAt(q), endAt(q + '\uf8ff'), limit(take));
+      const s1 = await getDocs(q1);
+      return s1.docs.map(d => ({ id: d.id, _col: collectionName, ...d.data() }));
+    } catch (err) {
+      // Fallback: scan and filter (keeps UX working without index)
+      const s2 = await getDocs(collection(db, collectionName));
+      return s2.docs.map(d => ({ id: d.id, _col: collectionName, ...d.data() }))
+                    .filter(x => (x.vehicleNumber||'').toUpperCase().includes(q))
+                    .slice(0, take);
+    }
+  };
+
+  const [fromClearances, fromRequests] = await Promise.all([
+    tryPrefix('vehicleClearances'),
+    tryPrefix('clearanceRequests')
+  ]);
+
+  // Merge by vehicleNumber + prefer active clearance over request
+  const byPlate = new Map();
+  const push = (item) => {
+    const key = (item.vehicleNumber||'').toUpperCase();
+    if (!key) return;
+    const prev = byPlate.get(key);
+    if (!prev || (item._col === 'vehicleClearances')) byPlate.set(key, item);
+  };
+  [...fromClearances, ...fromRequests].forEach(push);
+
+  // Sort by latest createdAt/expiryDate
+  const res = Array.from(byPlate.values()).sort((a,b) => {
+    const ad = (a.createdAt && a.createdAt.toDate ? a.createdAt.toDate() : 0) || 0;
+    const bd = (b.createdAt && b.createdAt.toDate ? b.createdAt.toDate() : 0) || 0;
+    return bd - ad;
+  });
+
+  return res;
+};
+
+const renderAdminSearchResults = (items, needle) => {
+  const list = document.getElementById('admin-search-results');
+  const empty = document.getElementById('admin-search-empty');
+  const loading = document.getElementById('admin-search-loading');
+  if (!list) return;
+  loading?.classList.add('hidden');
+  list.innerHTML = '';
+
+  if (!items || items.length === 0) {
+    empty?.classList.remove('hidden');
+    return;
+  }
+  empty?.classList.add('hidden');
+
+  const html = items.map(r => {
+    const date = r.entryDate || r.validFrom || r.validity?.split('-')?.[0]?.trim() || r.createdAt || null;
+    const pretty = date ? formatDate(date) : '';
+    const plate = (r.vehicleNumber||'').toUpperCase();
+    const status = (r.status || (r.expiryDate && (new Date() <= r.expiryDate.toDate()) ? 'ACTIVE':'EXPIRED') || '').toString().toUpperCase();
+
+    return `
+      <button class="review-btn group relative flex flex-col items-start gap-2 p-3 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 shadow-sm hover:shadow-md hover:border-blue-400 focus:outline-none focus:ring-2 focus:ring-blue-500 transition"
+              data-id="${r.id}" data-col="${r._col}" title="Open ${plate}">
+        <div class="w-full flex items-center justify-between gap-2">
+          <span class="font-mono text-lg font-extrabold tracking-wide text-blue-700 dark:text-blue-300">${plate}</span>
+          <span class="px-2 py-0.5 text-[11px] rounded-full bg-gray-100 text-gray-700 dark:bg-gray-700/60 dark:text-gray-200">${pretty}</span>
+        </div>
+        <div class="w-full flex items-center justify-between text-[11px] text-slate-400">
+          <span>${r._col === 'vehicleClearances' ? 'Clearance' : 'Request'}</span>
+          <span>${status}</span>
+        </div>
+      </button>
+    `;
+  }).join('');
+  list.innerHTML = html;
+
+  // Wire quick open
+  list.querySelectorAll('.review-btn').forEach(btn => {
+    btn.addEventListener('click', () => openByVehicleNumber(btn));
+  });
+};
+
+const openByVehicleNumber = async (el) => {
+  const id = el.getAttribute('data-id');
+  const col = el.getAttribute('data-col');
+  try {
+    if (col === 'clearanceRequests') {
+      // Open in existing Review modal (pending/requests flow)
+      // Find the object in live state if present, else fetch
+      let item = (clearanceRequests||[]).find(x => x.id === id);
+      if (!item) {
+        const snap = await getDoc(doc(db,'clearanceRequests', id));
+        if (snap.exists()) item = { id: snap.id, ...snap.data() };
+      }
+      if (item) showReviewModal(item); // existing function in script
+    } else {
+      // Open in “Manage Clearances” editor if you have one; otherwise open details modal
+      let item = (clearances||[]).find(x => x.id === id);
+      if (!item) {
+        const snap = await getDoc(doc(db,'vehicleClearances', id));
+        if (snap.exists()) item = { id: snap.id, ...snap.data() };
+      }
+      if (item) showClearanceDetailModal(item); // fallback to details modal if editor not present
+    }
+  } catch (e) {
+    console.error('Open by vehicle error', e);
+    showNotification('Failed to open record', 'error');
+  }
+};
+
+erCase();
     };
 
     const formatApprovalString = (clearance) => {
@@ -1862,8 +1984,45 @@
                             <h2 class="text-2xl font-semibold text-gray-800 dark:text-gray-100">Pending Requests</h2>
                             <span id="requests-count-badge" class="flex items-center justify-center min-w-[24px] h-6 px-2 text-xs font-bold text-white bg-red-500 rounded-full">0</span>
                         </div>
-                        <div id="requests-list" class="space-y-4"></div>
+                        
+        <!-- Admin Search Toolbar -->
+        <div id="admin-search-toolbar" class="mb-4 flex flex-col sm:flex-row gap-3 items-stretch">
+          <div class="relative flex-1 min-w-0">
+            <input id="admin-search-input" class="mobile-input w-full pl-10 pr-24 py-3 bg-slate-900/70 border border-slate-700 rounded-lg text-white placeholder-slate-400 focus:ring-blue-500 focus:border-blue-500" placeholder="Search vehicle number (e.g., JKK8788K)" />
+            <span class="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400">
+              ${icons.search}
+            </span>
+            <div class="absolute right-2 top-1/2 -translate-y-1/2 flex gap-2">
+              <button id="admin-search-voice" type="button" class="voice-search-btn flex items-center justify-center w-9 h-9 rounded-md bg-slate-700/70 hover:bg-slate-700 text-white">${icons.mic}</button>
+              <button id="admin-search-btn" type="button" class="px-3 py-2 rounded-md bg-blue-600 hover:bg-blue-500 text-white">Search</button>
+            </div>
+          </div>
+        </div>
+        <div id="admin-search-results" class="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-3 mb-6"></div>
+        <div id="admin-search-empty" class="hidden text-slate-400 text-sm mb-6">No matches.</div>
+        <div id="admin-search-loading" class="hidden text-slate-300 text-sm mb-6">Searching…</div>
+        
+        <div id="requests-list" class="space-y-4"></div>
                     </section>
+    <script>
+      (function(){
+        const input = document.getElementById('admin-search-input');
+        const btn = document.getElementById('admin-search-btn');
+        const voice = document.getElementById('admin-search-voice');
+        const loading = document.getElementById('admin-search-loading');
+        const doSearch = debounce(async () => {
+          const q = input.value || '';
+          if (!q.trim()) { document.getElementById('admin-search-results').innerHTML=''; document.getElementById('admin-search-empty').classList.add('hidden'); return; }
+          loading?.classList.remove('hidden');
+          const res = await searchVehiclesInDB(q);
+          renderAdminSearchResults(res, q);
+        }, 300);
+        if (input) input.addEventListener('input', doSearch);
+        if (btn) btn.addEventListener('click', doSearch);
+        if (voice) voice.addEventListener('click', () => startVoiceSearch(input, voice));
+      })();
+    </script>
+    
                     <section>
                         <div class="flex flex-wrap gap-4 justify-between items-center mb-6">
                             <h2 class="text-2xl font-semibold text-gray-800 dark:text-gray-100">Manage Clearances</h2>
