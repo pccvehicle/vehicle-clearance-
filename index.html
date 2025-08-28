@@ -2920,14 +2920,14 @@ const renderRequestsList = () => {
 
         // --- Global Event Listener ---
         document.body.addEventListener("click", async (e) => {
-            // Voice Search mic on Green List (user dashboard) search form
-if (button && button.id === 'user-dashboard-mic-btn') {
+            // Voice Search mic on Green List (user dashboard) search form (no 'button' redeclare)
+const __clickedBtn = e.target.closest("button");
+if (__clickedBtn && __clickedBtn.id === 'user-dashboard-mic-btn') {
     e.preventDefault();
     const input = document.getElementById('daily-clearance-search-input');
     if (typeof startVoiceSearch === 'function') {
-        startVoiceSearch(input, button);
+        startVoiceSearch(input, __clickedBtn);
     } else {
-        // Fallback: simple focus beep to indicate mic missing
         if (input) input.focus();
         console.warn('startVoiceSearch() not found.');
     }
