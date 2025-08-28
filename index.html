@@ -2921,21 +2921,20 @@ const renderRequestsList = () => {
         // --- Global Event Listener ---
         document.body.addEventListener("click", async (e) => {
             // Voice Search mic on Green List (user dashboard) search form (no 'button' redeclare)
-const __clickedBtn = e.target.closest("button");
-if (__clickedBtn && __clickedBtn.id === 'user-dashboard-mic-btn') {
+
+if (button && button.id === 'user-dashboard-mic-btn') {
     e.preventDefault();
     const input = document.getElementById('daily-clearance-search-input');
     if (typeof startVoiceSearch === 'function') {
-        startVoiceSearch(input, __clickedBtn);
+        startVoiceSearch(input, button);
     } else {
         if (input) input.focus();
         console.warn('startVoiceSearch() not found.');
     }
     return;
 }
-const button = e.target.closest("button");
+const button = e.target.closest('button');
 const target = e.target;
-            const button = target.closest('button');
             const link = target.closest('a');
 
             if (target.id === 'settings-backdrop') toggleSettingsPanel(false);
