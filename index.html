@@ -3680,11 +3680,11 @@ try { if (!window.db) { window.db = getFirestore(getApp()); } } catch (e) {}
       <div class="fixed inset-0 z-50 flex items-center justify-center p-4">
         <div class="absolute inset-0 bg-black/50 backdrop-blur-sm"></div>
         <div class="relative w-full max-w-3xl bg-white dark:bg-gray-800 rounded-2xl shadow-xl border border-gray-200 dark:border-gray-700">
-          <div class="p-4 sm:p-5 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between">
+          <div class="p-3 sm:p-4 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between gap-3">
             <h3 class="text-lg font-bold text-gray-800 dark:text-gray-100">Search All Vehicles</h3>
             <button id="ags-close" class="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700" title="Close">${icons.x}</button>
           </div>
-          <div class="p-4 sm:p-5 space-y-3">
+          <div class="p-3 sm:p-4 space-y-3">
             <label class="text-sm font-medium text-gray-600 dark:text-gray-300">Vehicle Number</label>
             <div class="flex gap-2">
               <input id="ags-input" class="flex-1 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-900 dark:text-white px-3 py-2" placeholder="e.g. 7931 or SB1234A" oninput="this.value=this.value.toUpperCase()">
@@ -3702,6 +3702,7 @@ try { if (!window.db) { window.db = getFirestore(getApp()); } } catch (e) {}
     $('#ags-voice', wrap).onclick = (e)=> startVoiceSearch(inputEl, e.currentTarget);
     inputEl.addEventListener('keydown', (ev)=>{ if(ev.key==='Enter') $('#ags-go', wrap).click(); });
     $('#ags-go', wrap).onclick = async () => {
+      try { await waitForDb(); } catch(e) { $('#ags-results', wrap).innerHTML = '<div class="p-3 rounded-lg bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 text-red-700 dark:text-red-300 text-sm">'+e.message+'</div>'; return; }
       const term = (inputEl.value||'').trim().toUpperCase();
       if(!term) return showNotification('Please enter a vehicle number','error');
       $('#ags-results', wrap).innerHTML = '<div class="flex items-center gap-3 text-sm text-gray-600 dark:text-gray-300"><div class="animate-spin w-5 h-5 border-2 border-gray-300 border-t-transparent rounded-full"></div>Searching…</div>';
