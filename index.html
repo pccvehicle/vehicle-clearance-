@@ -309,100 +309,42 @@
     let routeHistory = [];
 
     // --- VPS Email Notification Helper ---
-    
-    // --- Debug Utilities ---
-
-    // --- Local Email Body Generator (No AI, No Network) ---
-    const _escapeHtml = (s) => String(s||'')
-        .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
-        .replace(/"/g,'&quot;').replace(/'/g,'&#39;');
-
-    // Backwards-compatible stub replacing prior AI usage.
-    // Wherever the original code called `callGeminiApi(promptText)` we now
-    // return a simple, styled HTML email using the provided prompt text.
-    const callGeminiApi = async (promptText) => {
-        debugLog('AI disabled: generating static email body locally.');
-        const body = [
-            '<div style="font-family:Inter,Arial,sans-serif;font-size:14px;color:#0f172a">',
-            '<p>Hi,</p>',
-            '<p>This is an automated notification from the Vehicle Clearance System.</p>',
-            promptText ? ('<div style="padding:10px;border:1px solid #e2e8f0;border-radius:8px;background:#f8fafc;white-space:pre-wrap">' + _escapeHtml(promptText) + '</div>') : '',
-            '<p>Regards,<br/>PCC Security</p>',
-            '</div>'
-        ].join('\n');
-        return body;
-    };
-    // Toggle verbose logging in the console by setting localStorage.debugEmail = '1'
-    // Or add ?debug=1 to the URL.
-    let DEBUG_EMAIL = (new URLSearchParams(location.search).has('debug')) ||
-                      (localStorage.getItem('debugEmail') === '1');
-    const debugLog = (...args) => { if (DEBUG_EMAIL) console.log('[EmailDebug]', ...args); };
-    window.toggleEmailDebug = () => { 
-        DEBUG_EMAIL = !DEBUG_EMAIL; 
-        localStorage.setItem('debugEmail', DEBUG_EMAIL ? '1' : '0'); 
-        console.log('Email debug', DEBUG_EMAIL ? 'ENABLED' : 'DISABLED');
-    };
-    window._lastEmailDebug = {};
-    
-    // Graceful global error visibility for debugging
-    window.addEventListener('unhandledrejection', (e) => {
-        debugLog('Unhandled promise rejection:', e.reason);
-    });
-    window.addEventListener('error', (e) => {
-        debugLog('Window error:', e.message || e.error);
-    });
-
     const sendEmail = async (to, subject, htmlBody) => {
+      // The URL of the email service you created on your VPS
       const VPS_API_URL = 'https://email.th3va.com/send-email';
-      const YOUR_API_KEY = '83648:$/);&;84$:&;73638($'; // Keep in sync with your VPS .env
       
-      const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 15000);
-      const reqBody = { to, subject, htmlBody };
+      // The secret API key from your .env file on the VPS
+      const YOUR_API_KEY = '83648:$/);&;84$:&;73638($'; // Use the same key as your .env file
 
-      window._lastEmailDebug = { step: 'sending', to, subject, htmlPreview: (htmlBody||'').slice(0, 400) };
-      debugLog('Preparing to send email via VPS…', { url: VPS_API_URL, headers: ['Content-Type','x-api-key'], to, subject });
       try {
-        const response = await
-			/* LEGACY EMAIL CALL REMOVED:
-fetch('https://email.th3va.com/send-email', {
-  method: 'POST',
-  headers: {
-    'Content-Type': 'application/json',
-    'x-api-key': '7873&;@:$/);
-*/&;84$:&;73638($'
-  },
-  body: JSON.stringify({
-    to, subject,
-    htmlBody
-  }),
-});				
-
-        const raw = await response.text();
-        debugLog('Email service raw response (first 500 chars):', raw.slice(0, 500));
-
-        let data = null;
-        try { data = JSON.parse(raw); } catch (e) { /* not JSON, keep raw */ }
+        const response = await fetch(VPS_API_URL, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'x-api-key': YOUR_API_KEY, // Security key
+          },
+          body: JSON.stringify({
+            to: to,
+            subject: subject,
+            htmlBody: htmlBody,
+          }),
+        });
 
         if (!response.ok) {
-          const msg = (data && (data.error || data.message)) ? (data.error || data.message) : raw;
-          window._lastEmailDebug = { step: 'failed', status: response.status, statusText: response.statusText, body: raw };
-          throw new Error('Email service HTTP ' + response.status + ' ' + response.statusText + ' — ' + (msg ? String(msg).slice(0, 300) : 'Unknown error'));
+          // If the server responded with an error, log it
+          const errorData = await response.json();
+          throw new Error(errorData.error || 'Server responded with an error');
         }
 
-        window._lastEmailDebug = { step: 'ok', status: response.status, body: raw };
-        debugLog('Email request completed successfully.', { status: response.status, body: raw });
+        console.log("Email request sent to VPS successfully.");
         showNotification(`Email notification sent to ${to}.`, "success");
-        return true;
+
       } catch (error) {
-        debugLog('Failed to send email via VPS:', error);
+        console.error("Failed to send email via VPS:", error);
+        // Notify the admin that the main task (e.g., approval) worked, but the email failed
         showNotification("Action successful, but failed to send email notification.", "error");
-        return false;
-      } finally {
-        clearTimeout(timeoutId);
       }
     };
-;
 
 
     // --- Voice Search Implementation ---
@@ -3632,84 +3574,5 @@ unsubClearances = onSnapshot(query(collection(db, "vehicleClearances"), orderBy(
 
         renderLandingPage();
     </script>
-
-<!-- === BEGIN: Production Email Helper (inlined) === -->
-<script>
-  // ONE source of truth (must match your server .env API_KEY)
-  const EMAIL_API_URL = 'https://email.th3va.com/send-email';
-  const EMAIL_API_KEY = '<<PUT_SAME_API_KEY_AS_SERVER>>';
-
-  // Optional UI hook
-  window.showNotification = window.showNotification || function (msg, type) {
-    try {
-      const el = document.getElementById('note') || document.querySelector('[data-notice]');
-      if (el) {
-        el.textContent = msg;
-        el.className = type === 'success' ? 'text-emerald-400' : 'text-rose-400';
-      } else {
-        (type === 'success' ? console.log : console.error)(msg);
-      }
-    } catch (_) {}
-  };
-
-  // Production sendEmail()
-  async function sendEmail(to, subject, htmlBody) {
-    if (!to || !subject) throw new Error('sendEmail: "to" and "subject" are required');
-    const controller = new AbortController();
-    const t = setTimeout(() => controller.abort(), 15000);
-
-    try {
-      const res = await fetch(EMAIL_API_URL, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'x-api-key': EMAIL_API_KEY
-        },
-        body: JSON.stringify({ to, subject, htmlBody }),
-        signal: controller.signal
-      });
-      clearTimeout(t);
-
-      let data = null;
-      try { data = await res.json(); } catch (_) {}
-
-      if (!res.ok) {
-        const reason = (data && (data.error || data.message)) ? (data.error || data.message) : `HTTP ${res.status}`;
-        throw new Error(reason);
-      }
-      if (window.showNotification) showNotification(`Email sent to ${to}`, 'success');
-      return data || { ok: true };
-    } catch (err) {
-      clearTimeout(t);
-      console.error('Email send failed:', err);
-      if (window.showNotification) showNotification('Action OK, but email notification failed.', 'error');
-      throw err;
-    }
-  }
-
-  // SAFETY OVERRIDE: if legacy code still calls fetch('https://email.th3va.com/send-email', ...),
-  // inject the correct headers so it stays consistent with EMAIL_API_KEY.
-  (function patchEmailFetch(){
-    try {
-      const _orig = window.fetch.bind(window);
-      window.fetch = async function(input, init) {
-        try {
-          const url = (typeof input === 'string') ? input : (input && input.url);
-          if (url && url.indexOf(EMAIL_API_URL) === 0) {
-            init = init || {};
-            const hdrs = new Headers(init.headers || (input && input.headers) || {});
-            if (!hdrs.has('Content-Type')) hdrs.set('Content-Type', 'application/json');
-            hdrs.set('x-api-key', EMAIL_API_KEY);
-            init.headers = hdrs;
-            // Ensure URL is exactly the configured one
-            input = EMAIL_API_URL;
-          }
-        } catch(e) { /* no-op */ }
-        return _orig(input, init);
-      };
-    } catch(_) {}
-  })();
-</script>
-<!-- === END: Production Email Helper (inlined) === -->
 </body>
 </html>
