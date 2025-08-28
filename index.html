@@ -387,6 +387,22 @@ async function sendEmailRejected(to, name) {
 <body class="">
     <div id="app-root"></div>
     <script type="module">
+
+// --- Bootstrap placeholders to avoid 'is not defined' during early calls ---
+let renderLandingPage, initializeVoiceRecognition, renderAdminDashboard;
+
+// Provide runtime aliasing to existing functions when available
+function __bindVCAliases() {
+  if (typeof window !== 'undefined') {
+    if (!renderAdminDashboard && typeof renderUserDashboard === 'function') {
+      renderAdminDashboard = renderUserDashboard;
+    }
+    if (typeof renderLandingPage === 'function') window.renderLandingPage = renderLandingPage;
+    if (typeof initializeVoiceRecognition === 'function') window.initializeVoiceRecognition = initializeVoiceRecognition;
+    if (typeof renderAdminDashboard === 'function') window.renderAdminDashboard = renderAdminDashboard;
+  }
+}
+
 		
 	import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
     import {
