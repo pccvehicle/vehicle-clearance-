@@ -3649,6 +3649,8 @@ import {
     getDocs, collection, query, where, orderBy, startAt, endAt, limit
   } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
+try { if (!window.db) { window.db = getFirestore(getApp()); } } catch (e) {}
+
 (() => {
   if (window.__ADMIN_GLOBAL_SEARCH_WIRED__) return;
   window.__ADMIN_GLOBAL_SEARCH_WIRED__ = true;
