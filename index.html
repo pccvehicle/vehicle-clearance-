@@ -3692,39 +3692,56 @@ const waitForDb = (timeout = 5000) => {
     try { const SR = window.SpeechRecognition || window.webkitSpeechRecognition; if (!SR) return showNotification('Voice unsupported on this device', 'error'); const rec = new SR(); rec.lang='en-US'; rec.onresult=(e)=>{ const txt=(e.results?.[0]?.[0]?.transcript||'').toUpperCase(); if(inputEl) inputEl.value=txt; $('#ags-go')?.click(); }; rec.start(); } catch(e){ showNotification('Voice init failed','error'); }
   };
 
+  
   function openAdminSearchModal() {
     const host = $('#modal-container') || document.body;
     const wrap = document.createElement('div');
     wrap.id = 'admin-global-search-modal';
     wrap.innerHTML = `
       <div class="fixed inset-0 z-50 flex items-center justify-center p-4">
-        <div class="absolute inset-0 bg-black/50 backdrop-blur-sm"></div>
-        <div class="relative w-full max-w-3xl bg-white dark:bg-gray-800 rounded-2xl shadow-xl border border-gray-200 dark:border-gray-700">
-          <div class="p-3 sm:p-4 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between gap-3">
+        <div class="absolute inset-0 bg-black/50 backdrop-blur-sm" id="ags-backdrop"></div>
+        <div class="relative w-full max-w-3xl bg-white dark:bg-gray-800 rounded-2xl shadow-xl border border-gray-200 dark:border-gray-700 flex flex-col" style="max-height: 90vh;">
+          <div class="p-3 sm:p-4 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between gap-3 flex-shrink-0">
             <h3 class="text-lg font-bold text-gray-800 dark:text-gray-100">Search All Vehicles</h3>
-            <button id="ags-close" class="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700" title="Close">${icons.x}</button>
+            <button id="ags-close-top" class="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700" title="Close">${icons.x}</button>
           </div>
-          <div class="p-3 sm:p-4 space-y-3">
+          <div class="p-3 sm:p-4 space-y-3 flex-grow overflow-y-auto">
             <label class="text-sm font-medium text-gray-600 dark:text-gray-300">Vehicle Number</label>
             <div class="flex gap-2">
-              <input id="ags-input" class="flex-1 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-900 dark:text-white px-3 py-2" placeholder="e.g. 7931 or SB1234A" oninput="this.value=this.value.toUpperCase()">
-              <button id="ags-voice" class="px-3 py-2 rounded-lg text-white bg-purple-600 hover:bg-purple-700" title="Voice">${icons.mic}</button>
-              <button id="ags-go" class="px-4 py-2 rounded-lg text-white bg-blue-600 hover:bg-blue-500 font-semibold" title="Search">Search</button>
+              <input id="ags-input" class="flex-1 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-900 dark:text-white px-3 py-2" placeholder="Enter vehicle number..." oninput="this.value=this.value.toUpperCase()">
             </div>
             <p class="text-xs text-gray-500 dark:text-gray-400">Exact match first. Partial (prefix) matches follow.</p>
             <div id="ags-results" class="mt-2 space-y-4"></div>
           </div>
+          <div class="p-3 sm:p-4 border-t border-gray-200 dark:border-gray-700 flex justify-end items-center gap-2 flex-shrink-0">
+              <button id="ags-search" class="px-4 py-2 text-sm rounded-lg text-white bg-blue-600 hover:bg-blue-500 font-semibold" title="Search">Search</button>
+              <button id="ags-clear" class="px-4 py-2 text-sm rounded-lg bg-gray-200 dark:bg-gray-600 text-gray-800 dark:text-gray-200 hover:bg-gray-300 dark:hover:bg-gray-500">Clear</button>
+              <button id="ags-exit" class="px-4 py-2 text-sm rounded-lg bg-red-600 text-white hover:bg-red-700">Exit</button>
+          </div>
         </div>
       </div>`;
     host.appendChild(wrap);
-    $('#ags-close', wrap).onclick = () => wrap.remove();
+    
+    const closeModal = () => wrap.remove();
+    $('#ags-close-top', wrap).onclick = closeModal;
+    $('#ags-exit', wrap).onclick = closeModal;
+    $('#ags-backdrop', wrap).onclick = closeModal;
+    
     const inputEl = $('#ags-input', wrap);
-    $('#ags-voice', wrap).onclick = (e)=> startVoiceSearch(inputEl, e.currentTarget);
-    inputEl.addEventListener('keydown', (ev)=>{ if(ev.key==='Enter') $('#ags-go', wrap).click(); });
-    $('#ags-go', wrap).onclick = async () => {
+    
+    $('#ags-clear', wrap).onclick = () => {
+        inputEl.value = '';
+        $('#ags-results', wrap).innerHTML = '';
+        inputEl.focus();
+    };
+
+    const performSearch = async () => {
       try { await waitForDb(); } catch(e) { $('#ags-results', wrap).innerHTML = '<div class="p-3 rounded-lg bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 text-red-700 dark:text-red-300 text-sm">'+e.message+'</div>'; return; }
       const term = (inputEl.value||'').trim().toUpperCase();
-      if(!term) return showNotification('Please enter a vehicle number','error');
+      if(!term) {
+          showNotification('Please enter a vehicle number','error');
+          return;
+      }
       $('#ags-results', wrap).innerHTML = '<div class="flex items-center gap-3 text-sm text-gray-600 dark:text-gray-300"><div class="animate-spin w-5 h-5 border-2 border-gray-300 border-t-transparent rounded-full"></div>Searching…</div>';
       try {
         const res = await searchVehiclesGlobal(term);
@@ -3734,11 +3751,17 @@ const waitForDb = (timeout = 5000) => {
         $('#ags-results', wrap).innerHTML = '<div class="p-3 rounded-lg bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 text-red-700 dark:text-red-300 text-sm">Search failed: '+(e?.message||'Unknown error')+'</div>';
       }
     };
+
+    inputEl.addEventListener('keydown', (ev)=>{ if(ev.key==='Enter') performSearch(); });
+    $('#ags-search', wrap).onclick = performSearch;
   }
 
+
+  async 
   async function searchVehiclesGlobal(PLATE){
     if(!window.db) throw new Error('Firestore not initialized (db missing)');
-    const results = { exact:{vehicleClearances:[],clearanceRequests:[],vvips:[]}, partial:{vehicleClearances:[],clearanceRequests:[],vvips:[]} };
+    // VVIPs removed from results object
+    const results = { exact:{vehicleClearances:[],clearanceRequests:[]}, partial:{vehicleClearances:[],clearanceRequests:[]} };
 
     const exactOn = async (coll) => {
       const q = query(collection(db, coll), where('vehicleNumber','==', PLATE));
@@ -3753,15 +3776,19 @@ const waitForDb = (timeout = 5000) => {
 
     results.exact.vehicleClearances = await exactOn('vehicleClearances');
     results.exact.clearanceRequests = await exactOn('clearanceRequests');
-    results.exact.vvips = await exactOn('vvips');
+    // VVIP search removed
+    // results.exact.vvips = await exactOn('vvips');
 
     results.partial.vehicleClearances = await prefixOn('vehicleClearances');
     results.partial.clearanceRequests = await prefixOn('clearanceRequests');
-    results.partial.vvips = await prefixOn('vvips');
+    // VVIP search removed
+    // results.partial.vvips = await prefixOn('vvips');
 
     return results;
   }
 
+
+  
   function renderGlobalResults(payload, PLATE){
     const section = (title, list) => `
       <div class="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl overflow-hidden">
@@ -3773,41 +3800,71 @@ const waitForDb = (timeout = 5000) => {
     const exactBlock = `
       <h4 class="text-sm font-bold text-gray-800 dark:text-gray-100 mb-2">Exact match for <span class="font-mono">${PLATE}</span></h4>
       ${section('vehicleClearances', payload.exact.vehicleClearances)}
-      ${section('clearanceRequests', payload.exact.clearanceRequests)}
-      ${section('vvips', payload.exact.vvips)}`;
+      ${section('clearanceRequests', payload.exact.clearanceRequests)}`;
+      // VVIP section removed
     const partialBlock = `
       <h4 class="text-sm font-bold text-gray-800 dark:text-gray-100 mt-4 mb-2">Partial matches (prefix)</h4>
       ${section('vehicleClearances', payload.partial.vehicleClearances)}
-      ${section('clearanceRequests', payload.partial.clearanceRequests)}
-      ${section('vvips', payload.partial.vvips)}`;
+      ${section('clearanceRequests', payload.partial.clearanceRequests)}`;
+      // VVIP section removed
     return exactBlock + partialBlock;
   }
 
+
+  
   function renderRow(rec){
-    const plate = formatVehicleNumber(rec.vehicleNumber||'N/A');
-    const right = (()=>{
-      if (rec._coll==='vehicleClearances'){
-        let status = '—';
+    const plate = formatVehicleNumber(rec.vehicleNumber || 'N/A');
+    let status = '—';
+    let statusColor = 'text-gray-600 dark:text-gray-400';
+    let expiryDate = 'N/A';
+
+    if (rec._coll === 'vehicleClearances') {
         try {
-          const now = Date.now();
-          let exp = rec.expiryDate && (typeof rec.expiryDate.toDate==='function' ? rec.expiryDate.toDate() : new Date(rec.expiryDate));
-          if (exp instanceof Date && !isNaN(+exp)){ const e = new Date(exp); e.setHours(23,59,59,999); status = (now <= +e) ? 'ACTIVE' : 'EXPIRED'; }
-        } catch(e){}
-        const col = status==='ACTIVE' ? 'text-green-600 dark:text-green-400' : (status==='EXPIRED' ? 'text-red-600 dark:text-red-400' : 'text-gray-600');
-        return `<div class="text-xs text-gray-500 dark:text-gray-400">${rec.location||'—'} • ${formatDate(rec.expiryDate)||'—'} • <span class="font-semibold ${col}">${status}</span></div>`;
-      }
-      if (rec._coll==='clearanceRequests'){ return `<div class="text-xs text-gray-500 dark:text-gray-400">${rec.location||'—'} • ${(String(rec.status||'pending')).toUpperCase()}</div>`; }
-      if (rec._coll==='vvips'){ return `<div class="text-xs text-gray-500 dark:text-gray-400">VVIP • ${rec.name ? ('for '+rec.name) : '—'}</div>`; }
-      return '';
-    })();
-    const wa = rec.phone ? normalizePhoneNumberForWhatsApp(rec.phone) : null;
-    return `<div class="p-4 flex items-start justify-between gap-3">
-      <div><div class="font-semibold text-gray-800 dark:text-gray-100">${plate}</div>${right}</div>
-      <div class="flex gap-2">
-        ${wa ? `<a target="_blank" href="https://wa.me/${wa}" class="p-2 rounded-lg bg-green-600 text-white hover:bg-green-500" title="WhatsApp">${icons.whatsapp}</a>` : ''}
-        <button class="p-2 rounded-lg bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-gray-100 hover:bg-gray-300 dark:hover:bg-gray-600" onclick="navigator.clipboard.writeText('${plate}'); showNotification('Copied ${plate}');" title="Copy">${icons.download}</button>
-      </div></div>`;
+            const now = new Date();
+            const exp = rec.expiryDate?.toDate?.();
+            if (exp) {
+                expiryDate = formatDate(exp);
+                const expiryEnd = new Date(exp);
+                expiryEnd.setHours(23, 59, 59, 999);
+                status = (now <= expiryEnd) ? 'ACTIVE' : 'EXPIRED';
+            }
+        } catch(e) { /* Fails silently */ }
+    } else if (rec._coll === 'clearanceRequests') {
+        status = (rec.status || 'pending').toUpperCase();
+        // Use expiryDate from request if available, otherwise entryDate
+        const dateToUse = rec.expiryDate || rec.entryDate;
+        expiryDate = dateToUse ? formatDate(dateToUse) : 'N/A';
+    }
+
+    switch (status) {
+        case 'ACTIVE':
+        case 'APPROVED':
+            statusColor = 'text-green-600 dark:text-green-400';
+            break;
+        case 'EXPIRED':
+        case 'REJECTED':
+            statusColor = 'text-red-600 dark:text-red-400';
+            break;
+        case 'PENDING':
+            statusColor = 'text-yellow-600 dark:text-yellow-400';
+            break;
+    }
+
+    // The result row only shows vehicle number, expiry date, and status.
+    return `
+    <div class="p-4 flex items-center justify-between gap-3">
+        <div>
+            <div class="font-mono font-semibold text-gray-800 dark:text-gray-100">${plate}</div>
+            <div class="text-xs text-gray-500 dark:text-gray-400">
+                Expiry Date: <span class="font-medium">${expiryDate}</span>
+            </div>
+        </div>
+        <div class="text-right">
+             <span class="font-semibold text-sm px-2 py-1 rounded-md ${statusColor}">${status}</span>
+        </div>
+    </div>`;
   }
+
 
   function wireOnlyInAdmin(){
     const tryWire = () => {
