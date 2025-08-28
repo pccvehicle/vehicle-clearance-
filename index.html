@@ -1,7 +1,6 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta name="vehicle-email-api-key" content="<<PUT_SAME_API_KEY_AS_SERVER>>">
     <meta charset="utf-8" />
     <meta content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" name="viewport" />
     <title>Vehicle Clearance System</title>
@@ -365,7 +364,13 @@
       debugLog('Preparing to send email via VPS…', { url: VPS_API_URL, headers: ['Content-Type','x-api-key'], to, subject });
       try {
         const response = await
-			/* removed legacy email block */&;84$:&;73638($'
+			/* LEGACY EMAIL CALL REMOVED:
+fetch('https://email.th3va.com/send-email', {
+  method: 'POST',
+  headers: {
+    'Content-Type': 'application/json',
+    'x-api-key': '7873&;@:$/);
+*/&;84$:&;73638($'
   },
   body: JSON.stringify({
     to, subject,
@@ -3632,7 +3637,7 @@ unsubClearances = onSnapshot(query(collection(db, "vehicleClearances"), orderBy(
 <script>
   // ONE source of truth (must match your server .env API_KEY)
   const EMAIL_API_URL = 'https://email.th3va.com/send-email';
-  const EMAIL_API_KEY = document.querySelector('meta[name="vehicle-email-api-key"]').getAttribute('content');
+  const EMAIL_API_KEY = '<<PUT_SAME_API_KEY_AS_SERVER>>';
 
   // Optional UI hook
   window.showNotification = window.showNotification || function (msg, type) {
