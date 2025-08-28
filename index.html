@@ -2056,27 +2056,16 @@ const renderRequestsList = () => {
   }
 
   const grid = clearanceRequests.map(r => {
-    const escort = r.escortRequired ? `<span class="px-2 py-0.5 text-xs rounded-full bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300">Escort</span>`
-                                    : `<span class="px-2 py-0.5 text-xs rounded-full bg-gray-100 text-gray-600 dark:bg-gray-700/60 dark:text-gray-300">No Escort</span>`;
-    const when = r.timeSlot ? r.timeSlot.replace('-', ' to ') : (r.visitingHours || '-');
-    const loc  = r.location || '-';
-    const type = r.vehicleType || '-';
+    // Pick the best available date field for display
+    const entryDate = r.entryDate || r.validFrom || r.validity?.split('-')?.[0]?.trim() || r.createdAt || '';
+    const niceDate = entryDate ? formatDate(entryDate) : '';
 
     return `
-      <button class="review-btn group relative flex flex-col items-start gap-1 p-3 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 shadow-sm hover:shadow-md hover:border-blue-400 focus:outline-none focus:ring-2 focus:ring-blue-500 transition"
+      <button class="review-btn group relative flex flex-col items-start gap-2 p-3 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 shadow-sm hover:shadow-md hover:border-blue-400 focus:outline-none focus:ring-2 focus:ring-blue-500 transition"
               data-id="${r.id}" title="Review ${r.vehicleNumber}">
         <div class="w-full flex items-center justify-between gap-2">
           <span class="font-mono text-lg font-extrabold tracking-wide text-blue-700 dark:text-blue-300">${(r.vehicleNumber||'').toUpperCase()}</span>
-          <span class="px-2 py-0.5 text-[10px] font-semibold rounded-full bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300">${type}</span>
-        </div>
-        <div class="w-full text-[12px] text-gray-600 dark:text-gray-300 flex items-center gap-2">
-          <span class="inline-flex items-center gap-1"><span class="w-3 h-3">${icons.location}</span>${loc}</span>
-          <span class="text-gray-300 dark:text-gray-600">•</span>
-          <span class="inline-flex items-center gap-1"><span class="w-3 h-3">${icons.clock}</span>${when}</span>
-        </div>
-        <div class="w-full flex items-center justify-between pt-1">
-          ${escort}
-          <span class="text-[10px] text-gray-400">${r.createdAt ? 'Created ' + formatDate(r.createdAt) : ''}</span>
+          <span class="px-2 py-0.5 text-[11px] rounded-full bg-gray-100 text-gray-700 dark:bg-gray-700/60 dark:text-gray-200">${niceDate}</span>
         </div>
       </button>
     `;
