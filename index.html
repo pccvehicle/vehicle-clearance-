@@ -1817,9 +1817,7 @@
                        placeholder="Search Vehicle..." 
                        oninput="this.value=this.value.toUpperCase()" 
                        value="${vehicleFilter || ''}">
-                <button type="button" class="voice-search-btn mobile-button px-3 py-2 rounded-lg text-white bg-purple-600 hover:bg-purple-700 transition-colors flex-shrink-0" title="Voice">
-                  <span class="w-4 h-4">${icons.mic}</span>
-                </button>
+                
                 <button type="reset" class="mobile-button px-3 py-2 rounded-lg text-gray-800 dark:text-gray-200 bg-gray-200 dark:bg-gray-600 hover:bg-gray-300 dark:hover:bg-gray-500 flex-shrink-0">
                   Clear
                 </button>
@@ -3653,8 +3651,118 @@ import {
 try { if (!window.db) { window.db = getFirestore(getApp()); } } catch (e) {}
 
 (() => {
-  if (window.__ADMIN_GLOBAL_SEARCH_WIRED__) return;
-  window.__ADMIN_GLOBAL_SEARCH_WIRED__ = true;
+  if (window.__ADMIN_GLOBAL_SEARCH_WIRED__;
+
+// Injected: digits-only admin search fallback
+async function executeAdminGlobalSearch() {
+  const input = document.getElementById("admin-global-search-input") || document.getElementById("admin-search-input");
+  const q = (input?.value || "").replace(/\D/g,"");
+  if (!q) { showNotification("Enter numbers to search", "error"); return; }
+  const all = [];
+  const snap1 = await getDocs(collection(db,"vehicleClearances"));
+  snap1.forEach(d=>all.push({id:d.id, ...d.data()}));
+  const snap2 = await getDocs(collection(db,"clearanceRequests"));
+  snap2.forEach(d=>all.push({id:d.id, ...d.data()}));
+  const matches = all.filter(it => (it.vehicleNumber||"").replace(/\D/g,"").includes(q));
+  buildAdminSearchResults(matches);
+}
+;
+
+// Injected minimal result renderer
+const renderMinimalResultCard = (rec) => {
+// Injected: minimal results builder with Clear/Exit handlers
+function buildAdminSearchResults(matches){
+  const host = document.getElementById("admin-search-results") || document.getElementById("admin-search-results-container");
+  if (!host) return;
+  host.innerHTML = (matches && matches.length) ? matches.map(renderMinimalResultCard).join("") : '<div class="text-slate-400 text-sm mt-3">No records.</div>';
+  host.querySelectorAll('[data-action="clear"]').forEach(btn=>{
+    btn.addEventListener('click', ()=>{
+      const input = document.getElementById("admin-global-search-input") || document.getElementById("admin-search-input");
+      if (input){ input.value = ""; input.focus(); }
+      host.innerHTML = '';
+    });
+  });
+  host.querySelectorAll('[data-action="exit"]').forEach(btn=>{
+    btn.addEventListener('click', ()=>{
+      // Try to go back to Admin home if available
+      if (typeof renderAdminDashboard === 'function') renderAdminDashboard();
+      else if (typeof renderAdminHome === 'function') renderAdminHome();
+      else window.location.hash = '#admin';
+    });
+  });
+}
+
+  const vno = (rec.vehicleNumber || '').toUpperCase();
+  const exp = rec.expiryDate ? (rec.expiryDate.toDate ? rec.expiryDate.toDate() : new Date(rec.expiryDate)) : null;
+  const expStr = exp ? `${String(exp.getDate()).padStart(2,'0')}/${String(exp.getMonth()+1).padStart(2,'0')}/${String(exp.getFullYear()).slice(-2)}` : 'N/A';
+  const now = new Date();
+  let status = 'PENDING';
+  if (rec.status) status = String(rec.status).toUpperCase();
+  if (!rec.status && rec.expiryDate) {
+    const midnight = new Date(exp); midnight.setHours(23,59,59,999);
+    status = (now <= midnight) ? 'ACTIVE' : 'EXPIRED';
+  }
+  return `
+    <div class="p-3 rounded-xl bg-slate-800 border border-slate-700 mt-3">
+      <div class="flex items-center justify-between gap-3">
+        <div>
+          <div class="text-lg font-bold text-white">${vno}</div>
+          <div class="text-xs text-slate-300">Expiry: ${expStr}</div>
+          <div class="mt-1 text-xs font-semibold ${status==='ACTIVE'||status==='APPROVED'?'text-green-400':(status==='PENDING'?'text-yellow-400':'text-red-400')}">${status}</div>
+        </div>
+        <div class="flex gap-2">
+          <button class="px-3 py-2 rounded-lg bg-slate-700 hover:bg-slate-600 text-white text-sm" data-action="clear">Clear</button>
+          <button class="px-3 py-2 rounded-lg bg-slate-700 hover:bg-slate-600 text-white text-sm" data-action="exit">Exit</button>
+        </div>
+      </div>
+    </div>`;
+};
+) return;
+  window.__ADMIN_GLOBAL_SEARCH_WIRED__;
+
+// Injected: digits-only admin search fallback
+async function executeAdminGlobalSearch() {
+  const input = document.getElementById("admin-global-search-input") || document.getElementById("admin-search-input");
+  const q = (input?.value || "").replace(/\D/g,"");
+  if (!q) { showNotification("Enter numbers to search", "error"); return; }
+  const all = [];
+  const snap1 = await getDocs(collection(db,"vehicleClearances"));
+  snap1.forEach(d=>all.push({id:d.id, ...d.data()}));
+  const snap2 = await getDocs(collection(db,"clearanceRequests"));
+  snap2.forEach(d=>all.push({id:d.id, ...d.data()}));
+  const matches = all.filter(it => (it.vehicleNumber||"").replace(/\D/g,"").includes(q));
+  buildAdminSearchResults(matches);
+}
+;
+
+// Injected minimal result renderer
+const renderMinimalResultCard = (rec) => {
+  const vno = (rec.vehicleNumber || '').toUpperCase();
+  const exp = rec.expiryDate ? (rec.expiryDate.toDate ? rec.expiryDate.toDate() : new Date(rec.expiryDate)) : null;
+  const expStr = exp ? `${String(exp.getDate()).padStart(2,'0')}/${String(exp.getMonth()+1).padStart(2,'0')}/${String(exp.getFullYear()).slice(-2)}` : 'N/A';
+  const now = new Date();
+  let status = 'PENDING';
+  if (rec.status) status = String(rec.status).toUpperCase();
+  if (!rec.status && rec.expiryDate) {
+    const midnight = new Date(exp); midnight.setHours(23,59,59,999);
+    status = (now <= midnight) ? 'ACTIVE' : 'EXPIRED';
+  }
+  return `
+    <div class="p-3 rounded-xl bg-slate-800 border border-slate-700 mt-3">
+      <div class="flex items-center justify-between gap-3">
+        <div>
+          <div class="text-lg font-bold text-white">${vno}</div>
+          <div class="text-xs text-slate-300">Expiry: ${expStr}</div>
+          <div class="mt-1 text-xs font-semibold ${status==='ACTIVE'||status==='APPROVED'?'text-green-400':(status==='PENDING'?'text-yellow-400':'text-red-400')}">${status}</div>
+        </div>
+        <div class="flex gap-2">
+          <button class="px-3 py-2 rounded-lg bg-slate-700 hover:bg-slate-600 text-white text-sm" data-action="clear">Clear</button>
+          <button class="px-3 py-2 rounded-lg bg-slate-700 hover:bg-slate-600 text-white text-sm" data-action="exit">Exit</button>
+        </div>
+      </div>
+    </div>`;
+};
+ = true;
 
   // --- Injected: robust DB readiness helper (from Fixes_v1.0) ---
 const waitForDb = (timeout = 5000) => {
@@ -3707,8 +3815,8 @@ const waitForDb = (timeout = 5000) => {
           <div class="p-3 sm:p-4 space-y-3">
             <label class="text-sm font-medium text-gray-600 dark:text-gray-300">Vehicle Number</label>
             <div class="flex gap-2">
-              <input id="ags-input" class="flex-1 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-900 dark:text-white px-3 py-2" placeholder="e.g. 7931 or SB1234A" oninput="this.value=this.value.toUpperCase()">
-              <button id="ags-voice" class="px-3 py-2 rounded-lg text-white bg-purple-600 hover:bg-purple-700" title="Voice">${icons.mic}</button>
+              <input pattern="\d*" inputmode="numeric" id="ags-input" class="flex-1 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-900 dark:text-white px-3 py-2" placeholder="e.g. 7931 or SB1234A" oninput="this.value=this.value.toUpperCase(); this.value=this.value.replace(/\D/g, '')">
+              
               <button id="ags-go" class="px-4 py-2 rounded-lg text-white bg-blue-600 hover:bg-blue-500 font-semibold" title="Search">Search</button>
             </div>
             <p class="text-xs text-gray-500 dark:text-gray-400">Exact match first. Partial (prefix) matches follow.</p>
