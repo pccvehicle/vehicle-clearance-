@@ -269,7 +269,7 @@
   limit,
   startAt,
   endAt
-} from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+}} from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
     // --- Configuration ---
     const ADMIN_INVITE_CODE = "ADMIN2025";
@@ -1850,7 +1850,12 @@
                     <button id="settings-btn" class="p-2 text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-full mobile-button">
                       ${icons.settings}
                     </button>
-                    <button id="logout-button" class="flex items-center justify-center gap-2 px-3 py-2 text-sm font-medium text-white bg-red-500 rounded-lg hover:bg-red-600 mobile-button">
+                    
+                    <button id="open-global-search" class="flex items-center gap-2 px-3 sm:px-4 py-2 text-sm font-semibold rounded-lg text-white bg-blue-600 hover:bg-blue-500 mobile-button">
+                      <span class="w-4 h-4">🔎</span>
+                      <span class="hidden sm:inline">Search All</span>
+                    </button>
+<button id="logout-button" class="flex items-center justify-center gap-2 px-3 py-2 text-sm font-medium text-white bg-red-500 rounded-lg hover:bg-red-600 mobile-button">
                       <span class="w-4 h-4">${icons.logout}</span> 
                       <span class="hidden sm:inline">Logout</span>
                     </button>
@@ -3639,16 +3644,6 @@ const renderRequestsList = () => {
         renderLandingPage();
     </script>
 
-<!-- Global Search Modal host (injected) -->
-<div id="admin-global-search-modal"></div>
-
-<!-- Floating "Search All Vehicles" button for Admin -->
-<button id="open-global-search" title="Search All Vehicles"
-        style="position:fixed;right:18px;bottom:18px;z-index:9999;display:flex;align-items:center;gap:8px;padding:10px 14px;border-radius:12px;border:none;background:#2563eb;color:#fff;font-weight:600;box-shadow:0 6px 18px rgba(0,0,0,.25);cursor:pointer">
-  <span aria-hidden="true">🔎</span><span class="hide-on-narrow">Search All</span>
-</button>
-
-
 <script type="module">
 (() => {
   if (window.__ADMIN_GLOBAL_SEARCH_WIRED__) return;
@@ -3658,92 +3653,68 @@ const renderRequestsList = () => {
     getDocs, collection, query, where, orderBy, startAt, endAt, limit
   } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
+  const $ = (sel, root=document) => root.querySelector(sel);
+
   const has = (k) => typeof window[k] !== 'undefined';
   window.showNotification = has('showNotification') ? window.showNotification
     : (msg, type='info') => { try { console.log(`[${type}]`, msg); } catch(e){} };
-  window.formatVehicleNumber = has('formatVehicleNumber') ? window.formatVehicleNumber
-    : (s) => (s||'').toString().toUpperCase();
-  window.formatDate = has('formatDate') ? window.formatDate
-    : (d) => {
-        try {
-          if (d && typeof d.toDate === 'function') d = d.toDate();
-          const dt = d instanceof Date ? d : (d ? new Date(d) : null);
-          return dt ? dt.toLocaleDateString() : '';
-        } catch(e){ return '';}
-      };
-  window.normalizePhoneNumberForWhatsApp = has('normalizePhoneNumberForWhatsApp') ? window.normalizePhoneNumberForWhatsApp
-    : (p) => (p||'').replace(/\D+/g,'');
+  window.formatVehicleNumber = has('formatVehicleNumber') ? window.formatVehicleNumber : (s) => (s||'').toString().toUpperCase();
+  window.formatDate = has('formatDate') ? window.formatDate : (d) => {
+    try { if (d && typeof d.toDate === 'function') d = d.toDate(); const dt = d instanceof Date ? d : (d ? new Date(d) : null); return dt ? dt.toLocaleDateString() : ''; } catch(e){ return '';}
+  };
+  window.normalizePhoneNumberForWhatsApp = has('normalizePhoneNumberForWhatsApp') ? window.normalizePhoneNumberForWhatsApp : (p) => (p||'').replace(/\D+/g,'');
 
-  window.icons = window.icons || {};
-  icons.search = icons.search || '🔎';
-  icons.mic = icons.mic || '🎤';
-  icons.x = icons.x || '&times;';
-  icons.whatsapp = icons.whatsapp || '🟢';
-  icons.download = icons.download || '📋';
+  window.icons = window.icons || {}; icons.x = icons.x || '&times;'; icons.mic = icons.mic || '🎤'; icons.whatsapp = icons.whatsapp || '🟢'; icons.download = icons.download || '📋';
 
-  window.startVoiceSearch = has('startVoiceSearch') ? window.startVoiceSearch
-    : (inputEl) => {
-        try {
-          const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
-          if (!SR) return showNotification('Voice unsupported on this device', 'error');
-          const rec = new SR();
-          rec.lang = 'en-US';
-          rec.continuous = false; rec.interimResults = false;
-          rec.onresult = (e) => {
-            const txt = (e.results?.[0]?.[0]?.transcript || '').toUpperCase();
-            if (inputEl) inputEl.value = txt;
-            document.getElementById('ags-go')?.click();
-          };
-          rec.start();
-        } catch(e){ showNotification('Voice init failed', 'error'); }
-      };
+  window.startVoiceSearch = has('startVoiceSearch') ? window.startVoiceSearch : (inputEl) => {
+    try { const SR = window.SpeechRecognition || window.webkitSpeechRecognition; if (!SR) return showNotification('Voice unsupported on this device', 'error'); const rec = new SR(); rec.lang='en-US'; rec.onresult=(e)=>{ const txt=(e.results?.[0]?.[0]?.transcript||'').toUpperCase(); if(inputEl) inputEl.value=txt; $('#ags-go')?.click(); }; rec.start(); } catch(e){ showNotification('Voice init failed','error'); }
+  };
 
-  function renderAdminGlobalSearchModal() {
-    const host = document.getElementById('admin-global-search-modal');
-    if (!host) return;
-    host.innerHTML = `
-      <div class="ag-modal" style="position:fixed;inset:0;background:rgba(0,0,0,.45);backdrop-filter:blur(4px);display:flex;align-items:center;justify-content:center;padding:16px;z-index:10000">
-        <div class="ag-card" style="width:min(920px,96vw);max-height:90vh;overflow:auto;background:var(--ag-bg,#fff);color:var(--ag-fg,#111);border:1px solid rgba(0,0,0,.08);border-radius:16px;box-shadow:0 12px 30px rgba(0,0,0,.25)">
-          <div style="display:flex;align-items:center;justify-content:space-between;padding:14px 16px;border-bottom:1px solid rgba(0,0,0,.08)">
-            <div style="font-weight:800;font-size:16px">Search All Vehicles</div>
-            <button id="ags-close" style="border:none;background:transparent;font-size:22px;cursor:pointer" title="Close">${icons.x}</button>
+  function openAdminSearchModal() {
+    const host = $('#modal-container') || document.body;
+    const wrap = document.createElement('div');
+    wrap.id = 'admin-global-search-modal';
+    wrap.innerHTML = `
+      <div class="fixed inset-0 z-50 flex items-center justify-center p-4">
+        <div class="absolute inset-0 bg-black/50 backdrop-blur-sm"></div>
+        <div class="relative w-full max-w-3xl bg-white dark:bg-gray-800 rounded-2xl shadow-xl border border-gray-200 dark:border-gray-700">
+          <div class="p-4 sm:p-5 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between">
+            <h3 class="text-lg font-bold text-gray-800 dark:text-gray-100">Search All Vehicles</h3>
+            <button id="ags-close" class="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700" title="Close">${icons.x}</button>
           </div>
-          <div style="padding:16px">
-            <label style="display:block;font-size:12px;font-weight:600;opacity:.7;margin-bottom:6px">Vehicle Number</label>
-            <div style="display:flex;gap:8px">
-              <input id="ags-input" placeholder="e.g. 7931 or SB1234A" oninput="this.value=this.value.toUpperCase()"
-                     style="flex:1;padding:10px 12px;border:1px solid #cbd5e1;border-radius:10px;font-weight:600">
-              <button id="ags-voice" title="Voice"
-                      style="padding:10px 12px;border-radius:10px;border:none;background:#7c3aed;color:#fff;font-weight:700;cursor:pointer">${icons.mic}</button>
-              <button id="ags-go" title="Search"
-                      style="padding:10px 14px;border-radius:10px;border:none;background:#2563eb;color:#fff;font-weight:700;cursor:pointer">Search</button>
+          <div class="p-4 sm:p-5 space-y-3">
+            <label class="text-sm font-medium text-gray-600 dark:text-gray-300">Vehicle Number</label>
+            <div class="flex gap-2">
+              <input id="ags-input" class="flex-1 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg text-gray-900 dark:text-white px-3 py-2" placeholder="e.g. 7931 or SB1234A" oninput="this.value=this.value.toUpperCase()">
+              <button id="ags-voice" class="px-3 py-2 rounded-lg text-white bg-purple-600 hover:bg-purple-700" title="Voice">${icons.mic}</button>
+              <button id="ags-go" class="px-4 py-2 rounded-lg text-white bg-blue-600 hover:bg-blue-500 font-semibold" title="Search">Search</button>
             </div>
-            <div style="font-size:12px;opacity:.7;margin-top:6px">Exact match first. Partial (prefix) matches follow.</div>
-            <div id="ags-results" style="margin-top:12px"></div>
+            <p class="text-xs text-gray-500 dark:text-gray-400">Exact match first. Partial (prefix) matches follow.</p>
+            <div id="ags-results" class="mt-2 space-y-4"></div>
           </div>
         </div>
-      </div>
-    `;
-    host.querySelector('#ags-close').onclick = () => host.innerHTML = '';
-    const inputEl = host.querySelector('#ags-input');
-    host.querySelector('#ags-voice').onclick = (e)=> startVoiceSearch(inputEl, e.currentTarget);
-    inputEl.addEventListener('keydown', (ev) => { if (ev.key === 'Enter') host.querySelector('#ags-go').click(); });
-    host.querySelector('#ags-go').onclick = async () => {
+      </div>`;
+    host.appendChild(wrap);
+    $('#ags-close', wrap).onclick = () => wrap.remove();
+    const inputEl = $('#ags-input', wrap);
+    $('#ags-voice', wrap).onclick = (e)=> startVoiceSearch(inputEl, e.currentTarget);
+    inputEl.addEventListener('keydown', (ev)=>{ if(ev.key==='Enter') $('#ags-go', wrap).click(); });
+    $('#ags-go', wrap).onclick = async () => {
       const term = (inputEl.value||'').trim().toUpperCase();
-      if (!term) return showNotification('Please enter a vehicle number','error');
-      host.querySelector('#ags-results').innerHTML = `<div class="spinner" style="width:22px;height:22px;border:3px solid #cbd5e1;border-top-color:transparent;margin:8px"></div> Searching…`;
+      if(!term) return showNotification('Please enter a vehicle number','error');
+      $('#ags-results', wrap).innerHTML = '<div class="flex items-center gap-3 text-sm text-gray-600 dark:text-gray-300"><div class="animate-spin w-5 h-5 border-2 border-gray-300 border-t-transparent rounded-full"></div>Searching…</div>';
       try {
         const res = await searchVehiclesGlobal(term);
-        host.querySelector('#ags-results').innerHTML = renderGlobalResults(res, term);
-      } catch(e){
+        $('#ags-results', wrap).innerHTML = renderGlobalResults(res, term);
+      } catch(e) {
         console.error(e);
-        host.querySelector('#ags-results').innerHTML = `<div style="padding:10px;border:1px solid #fecaca;background:#fee2e2;border-radius:10px;color:#b91c1c">Search failed: ${e?.message||'Unknown error'}</div>`;
+        $('#ags-results', wrap).innerHTML = '<div class="p-3 rounded-lg bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 text-red-700 dark:text-red-300 text-sm">Search failed: '+(e?.message||'Unknown error')+'</div>';
       }
     };
   }
 
   async function searchVehiclesGlobal(PLATE){
-    if (!window.db) throw new Error('Firestore not initialized (db missing)');
+    if(!window.db) throw new Error('Firestore not initialized (db missing)');
     const results = { exact:{vehicleClearances:[],clearanceRequests:[],vvips:[]}, partial:{vehicleClearances:[],clearanceRequests:[],vvips:[]} };
 
     const exactOn = async (coll) => {
@@ -3754,9 +3725,7 @@ const renderRequestsList = () => {
     const prefixOn = async (coll) => {
       const q = query(collection(db, coll), orderBy('vehicleNumber'), startAt(PLATE), endAt(PLATE + '\uf8ff'), limit(25));
       const snap = await getDocs(q);
-      return snap.docs
-        .filter(d => (d.get('vehicleNumber')||'').toUpperCase() !== PLATE)
-        .map(d => ({ id:d.id, ...d.data(), _coll:coll }));
+      return snap.docs.filter(d => (d.get('vehicleNumber')||'').toUpperCase() !== PLATE).map(d => ({ id:d.id, ...d.data(), _coll:coll }));
     };
 
     results.exact.vehicleClearances = await exactOn('vehicleClearances');
@@ -3772,17 +3741,19 @@ const renderRequestsList = () => {
 
   function renderGlobalResults(payload, PLATE){
     const section = (title, list) => `
-      <div style="border:1px solid #e5e7eb;border-radius:12px;overflow:hidden;margin:8px 0">
-        <div style="padding:8px 12px;background:#f8fafc;font-weight:700;font-size:13px">${title}</div>
-        <div>${list.length ? list.map(renderRow).join('') : `<div style="padding:12px;font-size:13px;opacity:.7">No records.</div>`}</div>
+      <div class="bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl overflow-hidden">
+        <div class="px-4 py-2 bg-gray-50 dark:bg-gray-900/40 text-sm font-semibold text-gray-700 dark:text-gray-200">${title}</div>
+        <div class="divide-y divide-gray-200 dark:divide-gray-700">
+          ${list.length ? list.map(renderRow).join('') : `<div class="p-4 text-sm text-gray-500 dark:text-gray-400">No records.</div>`}
+        </div>
       </div>`;
     const exactBlock = `
-      <div style="font-weight:800;color:#111827;margin:8px 0">Exact match for <span style="font-family:ui-monospace,monospace">${PLATE}</span></div>
+      <h4 class="text-sm font-bold text-gray-800 dark:text-gray-100 mb-2">Exact match for <span class="font-mono">${PLATE}</span></h4>
       ${section('vehicleClearances', payload.exact.vehicleClearances)}
       ${section('clearanceRequests', payload.exact.clearanceRequests)}
       ${section('vvips', payload.exact.vvips)}`;
     const partialBlock = `
-      <div style="font-weight:800;color:#111827;margin:16px 0 8px">Partial matches (prefix)</div>
+      <h4 class="text-sm font-bold text-gray-800 dark:text-gray-100 mt-4 mb-2">Partial matches (prefix)</h4>
       ${section('vehicleClearances', payload.partial.vehicleClearances)}
       ${section('clearanceRequests', payload.partial.clearanceRequests)}
       ${section('vvips', payload.partial.vvips)}`;
@@ -3794,58 +3765,42 @@ const renderRequestsList = () => {
     const right = (()=>{
       if (rec._coll==='vehicleClearances'){
         let status = '—';
-        try{
+        try {
           const now = Date.now();
           let exp = rec.expiryDate && (typeof rec.expiryDate.toDate==='function' ? rec.expiryDate.toDate() : new Date(rec.expiryDate));
-          if (exp instanceof Date && !isNaN(+exp)){
-            const e = new Date(exp); e.setHours(23,59,59,999);
-            status = (now <= +e) ? 'ACTIVE' : 'EXPIRED';
-          }
-        }catch(e){}
-        const statusColor = status==='ACTIVE'?'#16a34a':(status==='EXPIRED'?'#dc2626':'#374151');
-        return `<div style="font-size:12px;opacity:.8">${rec.location||'—'} • ${formatDate(rec.expiryDate)||'—'} • <span style="font-weight:800;color:${statusColor}">${status}</span></div>`;
+          if (exp instanceof Date && !isNaN(+exp)){ const e = new Date(exp); e.setHours(23,59,59,999); status = (now <= +e) ? 'ACTIVE' : 'EXPIRED'; }
+        } catch(e){}
+        const col = status==='ACTIVE' ? 'text-green-600 dark:text-green-400' : (status==='EXPIRED' ? 'text-red-600 dark:text-red-400' : 'text-gray-600');
+        return `<div class="text-xs text-gray-500 dark:text-gray-400">${rec.location||'—'} • ${formatDate(rec.expiryDate)||'—'} • <span class="font-semibold ${col}">${status}</span></div>`;
       }
-      if (rec._coll==='clearanceRequests'){
-        return `<div style="font-size:12px;opacity:.8">${rec.location||'—'} • ${(String(rec.status||'pending')).toUpperCase()}</div>`;
-      }
-      if (rec._coll==='vvips'){
-        return `<div style="font-size:12px;opacity:.8">VVIP • ${rec.name ? ('for '+rec.name) : '—'}</div>`;
-      }
+      if (rec._coll==='clearanceRequests'){ return `<div class="text-xs text-gray-500 dark:text-gray-400">${rec.location||'—'} • ${(String(rec.status||'pending')).toUpperCase()}</div>`; }
+      if (rec._coll==='vvips'){ return `<div class="text-xs text-gray-500 dark:text-gray-400">VVIP • ${rec.name ? ('for '+rec.name) : '—'}</div>`; }
       return '';
     })();
-
     const wa = rec.phone ? normalizePhoneNumberForWhatsApp(rec.phone) : null;
-    return `
-      <div style="display:flex;align-items:start;justify-content:space-between;gap:12px;padding:12px;border-top:1px solid #f1f5f9">
-        <div>
-          <div style="font-weight:800">${plate}</div>
-          ${right}
-        </div>
-        <div style="display:flex;gap:6px">
-          ${wa ? `<a target="_blank" href="https://wa.me/${wa}" style="padding:8px 10px;border-radius:10px;background:#16a34a;color:#fff;text-decoration:none" title="WhatsApp">${icons.whatsapp}</a>` : ''}
-          <button style="padding:8px 10px;border-radius:10px;background:#e5e7eb;border:none;cursor:pointer"
-                  onclick="navigator.clipboard.writeText('${plate}'); showNotification('Copied ${plate}')"
-                  title="Copy">${icons.download}</button>
-        </div>
-      </div>`;
+    return `<div class="p-4 flex items-start justify-between gap-3">
+      <div><div class="font-semibold text-gray-800 dark:text-gray-100">${plate}</div>${right}</div>
+      <div class="flex gap-2">
+        ${wa ? `<a target="_blank" href="https://wa.me/${wa}" class="p-2 rounded-lg bg-green-600 text-white hover:bg-green-500" title="WhatsApp">${icons.whatsapp}</a>` : ''}
+        <button class="p-2 rounded-lg bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-gray-100 hover:bg-gray-300 dark:hover:bg-gray-600" onclick="navigator.clipboard.writeText('${plate}'); showNotification('Copied ${plate}');" title="Copy">${icons.download}</button>
+      </div></div>`;
   }
 
-  function wireAdminGlobalSearch(){
-    const btn = document.getElementById('open-global-search');
-    if (btn) btn.onclick = () => renderAdminGlobalSearchModal();
+  function wireOnlyInAdmin(){
+    const tryWire = () => {
+      const btn = document.getElementById('open-global-search');
+      if (btn && !btn.__wired){
+        btn.__wired = true;
+        btn.addEventListener('click', openAdminSearchModal);
+      }
+    };
+    tryWire();
+    const obs = new MutationObserver(tryWire);
+    obs.observe(document.body, {childList:true, subtree:true});
   }
 
-  const style = document.createElement('style');
-  style.textContent = `.spinner{border-radius:9999px;animation:agspin 1s linear infinite}@keyframes agspin{to{transform:rotate(360deg)}}`;
-  document.head.appendChild(style);
-
-  if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', wireAdminGlobalSearch);
-  } else {
-    wireAdminGlobalSearch();
-  }
+  wireOnlyInAdmin();
 })();
 </script>
-
 </body>
 </html>
