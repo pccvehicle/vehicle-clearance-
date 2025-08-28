@@ -2922,6 +2922,7 @@ const renderRequestsList = () => {
         document.body.addEventListener("click", async (e) => {
             // Voice Search mic on Green List (user dashboard) search form (no 'button' redeclare)
 
+const button = e.target.closest('button');
 if (button && button.id === 'user-dashboard-mic-btn') {
     e.preventDefault();
     const input = document.getElementById('daily-clearance-search-input');
@@ -2933,7 +2934,6 @@ if (button && button.id === 'user-dashboard-mic-btn') {
     }
     return;
 }
-const button = e.target.closest('button');
 const target = e.target;
             const link = target.closest('a');
 
