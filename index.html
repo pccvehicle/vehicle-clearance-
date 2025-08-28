@@ -269,7 +269,7 @@
   limit,
   startAt,
   endAt
-}} from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+} from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
     // --- Configuration ---
     const ADMIN_INVITE_CODE = "ADMIN2025";
@@ -3645,13 +3645,13 @@ const renderRequestsList = () => {
     </script>
 
 <script type="module">
+import {
+    getDocs, collection, query, where, orderBy, startAt, endAt, limit
+  } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+
 (() => {
   if (window.__ADMIN_GLOBAL_SEARCH_WIRED__) return;
   window.__ADMIN_GLOBAL_SEARCH_WIRED__ = true;
-
-  import {
-    getDocs, collection, query, where, orderBy, startAt, endAt, limit
-  } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
   const $ = (sel, root=document) => root.querySelector(sel);
 
