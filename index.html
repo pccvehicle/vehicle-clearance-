@@ -247,6 +247,11 @@
     70% { box-shadow: 0 0 0 10px rgba(239, 68, 68, 0); }
     100% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0); }
 }
+
+
+/* [VoiceSearch] Hide legacy white mic completely */
+#greenlist-mic { display: none !important; visibility: hidden !important; }
+
 </style>
 </head>
 <body class="">
@@ -466,13 +471,15 @@
             handleVoiceResult(event);
         };
 
-        recognition.onerror = (event) => {
-            let errorMessage = 'An error occurred during voice recognition.';
-            if (event.error === 'no-speech') errorMessage = 'No speech detected. Please try again.';
-            else if (event.error === 'not-allowed') errorMessage = 'Microphone permission denied.';
-            showNotification(errorMessage, "error");
-            stopVoiceSearch();
-        };
+        
+recognition.onerror = (event) => {
+    let errorMessage = 'An error occurred during voice recognition.';
+    if (event.error === 'no-speech') errorMessage = 'No speech detected. Please try again.';
+    else if (event.error === 'not-allowed') errorMessage = 'Microphone permission denied.';
+    try { showNotification && showNotification(errorMessage, "error"); } catch(e) {}
+    stopVoiceSearch();
+};
+
 
         recognition.onend = () => {
             if (isVoiceSearchActive) stopVoiceSearch();
@@ -533,32 +540,34 @@
     };
 
     const startVoiceSearch = (inputElement, buttonElement) => {
-        if (!recognition) {
-            if (!initializeVoiceRecognition()) {
-                showNotification("Voice search not supported on this device", "error");
-                return;
-            }
-        }
-
-        if (isVoiceSearchActive) {
-            stopVoiceSearch();
+    if (!recognition) {
+        if (!initializeVoiceRecognition()) {
+            try { showNotification && showNotification("Voice search not supported on this device", "error"); } catch(e) {}
             return;
         }
+    }
 
-        currentVoiceInput = inputElement;
-        currentVoiceButton = buttonElement;
+    if (isVoiceSearchActive) { stopVoiceSearch(); return; }
 
-        try {
-            playBeep(523, 150);
-            recognition.start();
-            voiceSearchTimeout = setTimeout(() => {
-                showNotification("Voice search timed out.", "error");
-                stopVoiceSearch();
-            }, 8000);
-        } catch (error) {
-            showNotification("Failed to start voice search", "error");
-        }
-    };
+    currentVoiceInput = inputElement;
+    currentVoiceButton = buttonElement;
+
+    // iOS/Safari: resume AudioContext so beeps are allowed after a user gesture
+    try { if (audioContext && audioContext.state === 'suspended') { audioContext.resume(); } } catch(e) {}
+
+    try {
+        playBeep(523, 120);
+        recognition.start();
+        voiceSearchTimeout = setTimeout(() => {
+            try { showNotification && showNotification("Voice search timed out.", "error"); } catch(e) {}
+            stopVoiceSearch();
+        }, 7000);
+    } catch (error) {
+        try { showNotification && showNotification("Failed to start voice search", "error"); } catch(e) {}
+        stopVoiceSearch();
+    }
+};
+
 
     const stopVoiceSearch = () => {
         if (!isVoiceSearchActive) return;
@@ -572,14 +581,25 @@
         voiceSearchTimeout = null;
     };
 
-    const completeVoiceSearch = (detectedNumber) => {
-        if (currentVoiceInput && detectedNumber) {
-            currentVoiceInput.value = detectedNumber;
-            currentVoiceInput.dispatchEvent(new Event('input', { bubbles: true }));
-            showNotification(`Vehicle number "${detectedNumber}" detected!`);
+    
+const completeVoiceSearch = (detectedNumber) => {
+    if (currentVoiceInput && detectedNumber) {
+        currentVoiceInput.value = detectedNumber;
+        currentVoiceInput.dispatchEvent(new Event('input', { bubbles: true }));
+
+        // Try to submit search immediately
+        const form = currentVoiceInput.closest('form');
+        const searchBtn = (form ? form : document).querySelector('[data-action="search"], .search-btn, button[type="submit"]');
+        if (form) {
+            try { form.requestSubmit ? form.requestSubmit() : form.submit(); } catch(e) {}
+        } else if (searchBtn) {
+            try { searchBtn.click(); } catch(e) {}
         }
-        stopVoiceSearch();
-    };
+        try { showNotification && showNotification(`Vehicle number "${detectedNumber}" detected!`); } catch(e) {}
+    }
+    stopVoiceSearch();
+};
+
 
     // --- NEW DATABASE FUNCTIONS ---
     const calculateDistance = (lat1, lon1, lat2, lon2) => {
@@ -3893,7 +3913,7 @@ const waitForDb = (timeout = 5000) => {
 
 // [VoiceSearch] delegated click handler
 document.addEventListener("click", function(e) {
-  const btn = e.target.closest('.voice-search-btn, #greenlist-mic');
+  const btn = e.target.closest('.voice-search-btn');
   if (!btn) return;
   e.preventDefault();
   const scope = btn.closest('form, .flex, .grid, .container, body');
@@ -3911,19 +3931,22 @@ window.ensureVoiceSearchControls = function() {
       const input = form.querySelector('#daily-clearance-search-input') || form.querySelector('input[inputmode="numeric"], input[type="search"], input[type="text"], input:not([type])');
       if (!input) return;
       let micBtn = form.querySelector('.voice-search-btn');
+      // If more than one mic exists near this input, keep the first and remove the rest
+      const existingMics = form.querySelectorAll('.voice-search-btn');
+      if (existingMics.length > 1) {
+        existingMics.forEach((el, idx) => { if (idx > 0) el.remove(); });
+        micBtn = form.querySelector('.voice-search-btn');
+      }
       if (!micBtn) {
         micBtn = document.createElement('button');
         micBtn.type = 'button';
         micBtn.className = 'voice-search-btn mobile-button px-3 py-2 rounded-lg text-white bg-purple-600 hover:bg-purple-700 transition-colors flex-shrink-0';
         micBtn.title = 'Voice';
         micBtn.innerHTML = '<span class="w-4 h-4"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"></path><path d="M19 10v2a7 7 0 0 1-14 0v-2"></path><line x1="12" y1="19" x2="12" y2="23"></line><line x1="8" y1="23" x2="16" y2="23"></line></svg></span>';
-        // Insert after input, before any reset/clear button
-        if (input.nextSibling) {
-          input.parentNode.insertBefore(micBtn, input.nextSibling);
-        } else {
-          input.parentNode.appendChild(micBtn);
-        }
+        if (input.nextSibling) { input.parentNode.insertBefore(micBtn, input.nextSibling); }
+        else { input.parentNode.appendChild(micBtn); }
       }
+}
       // Make sure input restricts to digits only for this workflow
       input.setAttribute('inputmode', 'numeric');
       input.setAttribute('pattern', '\\d*');
