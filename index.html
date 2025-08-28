@@ -291,6 +291,7 @@
         app = initializeApp(firebaseConfig);
         auth = getAuth(app);
         db = getFirestore(app);
+        window.db = db; // expose for admin global search waitForDb
         console.log("Firebase initialized successfully");
     } catch (err) {
         console.error("Firebase initialization error:", err);
@@ -3654,6 +3655,25 @@ try { if (!window.db) { window.db = getFirestore(getApp()); } } catch (e) {}
 (() => {
   if (window.__ADMIN_GLOBAL_SEARCH_WIRED__) return;
   window.__ADMIN_GLOBAL_SEARCH_WIRED__ = true;
+
+  // --- Injected: robust DB readiness helper (from Fixes_v1.0) ---
+const waitForDb = (timeout = 5000) => {
+  return new Promise((resolve, reject) => {
+    const start = Date.now();
+    const check = () => {
+      if (window.db) {
+        resolve(window.db);
+      } else if (Date.now() - start > timeout) {
+        reject(new Error("Database connection timed out. Please refresh."));
+      } else {
+        setTimeout(check, 100); // Check every 100ms
+      }
+    };
+    check();
+  });
+};
+// --- End Injected helper ---
+
 
   const $ = (sel, root=document) => root.querySelector(sel);
 
