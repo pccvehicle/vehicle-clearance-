@@ -388,6 +388,35 @@ async function sendEmailRejected(to, name) {
     <div id="app-root"></div>
     <script type="module">
 
+// === Guaranteed safe stubs (added) ===
+if (typeof window !== 'undefined') {
+  if (typeof window.renderLandingPage !== "function") {
+    window.renderLandingPage = function(opts) {
+      try {
+        console.warn("renderLandingPage stub called — real function not yet loaded");
+        const el = document.getElementById("app-root");
+        if (el) el.innerHTML = "<div class='min-h-screen flex items-center justify-center p-6 text-white'>Landing Page (stub)</div>";
+      } catch(e){ console.warn(e); }
+    };
+  }
+  if (typeof window.initializeVoiceRecognition !== "function") {
+    window.initializeVoiceRecognition = function() {
+      console.warn("initializeVoiceRecognition stub called — real function not yet loaded");
+      return false;
+    };
+  }
+  if (typeof window.renderAdminDashboard !== "function") {
+    window.renderAdminDashboard = function(user) {
+      try {
+        console.warn("renderAdminDashboard stub called — real function not yet loaded");
+        const el = document.getElementById("app-root");
+        if (el) el.innerHTML = "<div class='min-h-screen flex items-center justify-center p-6 text-white'>Admin Dashboard (stub)</div>";
+      } catch(e){ console.warn(e); }
+    };
+  }
+}
+
+
 
 // --- Robust Bootstrap (proxies + early bind) ---
 let renderLandingPage, initializeVoiceRecognition, renderAdminDashboard;
