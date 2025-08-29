@@ -323,76 +323,18 @@
     // Backwards-compatible stub replacing prior AI usage.
     // Wherever the original code called `callGeminiApi(promptText)` we now
     // return a simple, styled HTML email using the provided prompt text.
-    const generateNotificationEmail= (status, data) => {
-    const orgName = "PCC Security";
-    const footerText = `This is an automated notification from the Vehicle Clearance System. Please do not reply to this email.`;
-
-    // A simple and robust HTML email template with inline styles for compatibility.
-    const template = (title, content) => `
-        <div style="font-family: Inter, Arial, sans-serif; font-size: 16px; line-height: 1.6; color: #333; max-width: 600px; margin: 20px auto; border: 1px solid #e2e8f0; border-radius: 8px; overflow: hidden;">
-            <div style="background-color: #0f172a; color: #ffffff; padding: 20px; text-align: center;">
-                <h1 style="margin: 0; font-size: 24px;">Vehicle Clearance System</h1>
-            </div>
-            <div style="padding: 25px;">
-                <h2 style="font-size: 20px; color: #1e293b; margin-top: 0;">${title}</h2>
-                ${content}
-                <p style="margin-top: 25px;">Regards,<br/><b>${orgName}</b></p>
-            </div>
-            <div style="background-color: #f1f5f9; color: #64748b; padding: 15px; text-align: center; font-size: 12px;">
-                ${footerText}
-            </div>
-        </div>
-    `;
-
-    let title = '';
-    let content = '';
-
-    switch (status) {
-        case 'pending':
-            title = 'Request Received';
-            content = `
-                <p>Hi ${data.requesterName || 'User'},</p>
-                <p>Thank you for your submission. Your vehicle clearance request for <b>${data.vehicleNumber}</b> is now pending review.</p>
-                <p>You will receive another email once the status of your request is updated.</p>
-                <hr style="border: none; border-top: 1px solid #e2e8f0; margin: 20px 0;">
-                <p style="font-size: 14px; color: #475569;"><b>Submitted On:</b> ${data.submittedAt}</p>
-            `;
-            break;
-
-        case 'approved':
-            title = 'Request Approved';
-            content = `
-                <p>Hi ${data.ownerName || 'User'},</p>
-                <p>Good news! Your vehicle clearance request for <b>${data.vehicleNumber}</b> has been <strong>approved</strong>.</p>
-                <hr style="border: none; border-top: 1px solid #e2e8f0; margin: 20px 0;">
-                <p style="font-size: 14px; color: #475569;"><b>Location:</b> ${data.location}</p>
-                <p style="font-size: 14px; color: #475569;"><b>Valid From:</b> ${data.entryDate}</p>
-                <p style="font-size: 14px; color: #475569;"><b>Valid Until:</b> ${data.expiryDate}</p>
-            `;
-            break;
-
-        case 'rejected':
-            title = 'Request Update';
-            content = `
-                <p>Hi ${data.requesterName || 'User'},</p>
-                <p>We have reviewed your vehicle clearance request for <b>${data.vehicleNumber}</b>. Unfortunately, it could not be approved at this time.</p>
-                <hr style="border: none; border-top: 1px solid #e2e8f0; margin: 20px 0;">
-                <p style="font-size: 14px; color: #475569;"><b>Reason for Rejection:</b></p>
-                <p style="padding: 10px; border-left: 3px solid #ef4444; background-color: #fee2e2;">${data.rejectionReason}</p>
-                <p>If you believe this is an error, please contact administration or submit a new request with corrected information.</p>
-            `;
-            break;
-
-        default:
-            // Fallback for any other case
-            content = `<p>${data.fallbackText || 'This is a notification from the Vehicle Clearance System.'}</p>`;
-            title = 'System Notification';
-    }
-
-    return template(title, content);
-};
-
-;
+    const callGeminiApi = async (promptText) => {
+        debugLog('AI disabled: generating static email body locally.');
+        const body = [
+            '<div style="font-family:Inter,Arial,sans-serif;font-size:14px;color:#0f172a">',
+            '<p>Hi,</p>',
+            '<p>This is an automated notification from the Vehicle Clearance System.</p>',
+            promptText ? ('<div style="padding:10px;border:1px solid #e2e8f0;border-radius:8px;background:#f8fafc;white-space:pre-wrap">' + _escapeHtml(promptText) + '</div>') : '',
+            '<p>Regards,<br/>PCC Security</p>',
+            '</div>'
+        ].join('\n');
+        return body;
+    };
     // Toggle verbose logging in the console by setting localStorage.debugEmail = '1'
     // Or add ?debug=1 to the URL.
     let DEBUG_EMAIL = (new URLSearchParams(location.search).has('debug')) ||
@@ -3201,27 +3143,49 @@ const target = e.target;
 
                     button.disabled = true;
 
-                    t// --- Start NEW Email Logic ---if (data.requesterEmail) {
-    try {
-        showNotification("Sending approval email...", "info");
-        const emailSubject = `Vehicle Clearance Approved: ${clearancePayload.vehicleNumber}`;
-        const emailData = {
-            ownerName: clearancePayload.ownerName,
-            vehicleNumber: clearancePayload.vehicleNumber,
-            location: clearancePayload.location,
-            entryDate: formatDate(clearancePayload.entryDate),
-            expiryDate: formatDate(clearancePayload.expiryDate)
-        };
-        const emailBody = generateNotificationEmail('approved', emailData);
-        await sendEmail(data.requesterEmail, emailSubject, emailBody);
-    } catch (emailError) {
-        console.error("Approval email failed to send:", emailError);
-        showNotification("Approval saved, but the email could not be sent.", "error");
-    }
-} else {
-    showNotification("Approval saved. No email on file to notify.", "info");
-}
-// --- End NEW Email Logic ---cleClearances"), clearancePayload);
+                    try {
+                        const data = getFormObj(form);
+                        const entryDate = parseLocalDate(data.entryDate);
+                        const expiryDate = parseLocalDate(data.expiryDate);
+
+                        if (!entryDate || !expiryDate || !form.checkValidity()) {
+                            form.reportValidity();
+                            showNotification("Please fill all required fields with valid dates.", "error");
+                            button.disabled = false;
+                            return;
+                        }
+
+                        if (!currentAdminProfile) { throw new Error("Admin profile not loaded. Cannot approve."); }
+
+                        const approvalTimestamp = Timestamp.now();
+                        const clearancePayload = {
+                            ownerName: data.ownerName,
+                            ownerEmail: data.requesterEmail,
+                            ownerContact: data.requesterContact,
+                            vehicleNumber: data.vehicleNumber.toUpperCase(),
+                            vehicleType: data.vehicleType,
+                            location: data.location === "Other" ? data.customLocation : data.location,
+                            timeSlot: data.timeSlot,
+                            entryDate: Timestamp.fromDate(entryDate),
+                            expiryDate: Timestamp.fromDate(expiryDate),
+                            escortRequired: !!data.escortRequired,
+                            notes: data.notes || "",
+                            createdAt: approvalTimestamp,
+                            approvedByUsername: currentAdminProfile.username,
+                            approvedByDesignation: currentAdminProfile.designation,
+                            approvedByUid: auth.currentUser?.uid,
+                            approvedAt: approvalTimestamp,
+                            approvalHistory: [{
+                                action: 'approved',
+                                byUsername: currentAdminProfile.username,
+                                byDesignation: currentAdminProfile.designation,
+                                byUid: auth.currentUser?.uid,
+                                timestamp: approvalTimestamp,
+                                notes: `Approved from request ID: ${requestId}`
+                            }]
+                        };
+
+                        await addDoc(collection(db, "vehicleClearances"), clearancePayload);
                         await updateDoc(doc(db, "clearanceRequests", requestId), {
                             status: 'approved',
                             approvedBy: `${currentAdminProfile.username} (${currentAdminProfile.designation})`,
@@ -3231,29 +3195,38 @@ const target = e.target;
 
                         showNotification(`Request approved by ${currentAdminProfile.username}`);
 
-                        // --- Start NEW Email Logic ---
+                        // --- Start Email Logic ---
                         if (data.requesterEmail) {
+                            let emailBody;
                             try {
-                                showNotification("Sending approval email...", "info");
+                                showNotification("Generating approval email content...", "info");
+                                const emailPrompt = `Generate a professional and friendly HTML email. The user's vehicle clearance request has been APPROVED.
+                            - Recipient's Name: ${data.ownerName}
+                            - Vehicle Number: ${clearancePayload.vehicleNumber}
+                            - Approved Location: ${clearancePayload.location}
+                            - Validity Period: From ${formatDate(clearancePayload.entryDate)} to ${formatDate(clearancePayload.expiryDate)}.
+                            - Include a friendly closing and mention that they can track their status online.
+                            - The email should be well-formatted with HTML, using headings, bold text, and paragraphs for readability. Do not include any CSS or style tags.`;
+                                emailBody = await callGeminiApi(emailPrompt);
+                            } catch (apiError) {
+                                console.error("Gemini API failed:", apiError);
+                                showNotification("Approval saved, but AI email generation failed.", "error");
+                                document.getElementById("modal-container").innerHTML = ""; // Close modal even on email fail
+                                return; // Exit the handler
+                            }
+
+                            try {
                                 const emailSubject = `Vehicle Clearance Approved: ${clearancePayload.vehicleNumber}`;
-                                const emailData = {
-                                    ownerName: clearancePayload.ownerName,
-                                    vehicleNumber: clearancePayload.vehicleNumber,
-                                    location: clearancePayload.location,
-                                    entryDate: formatDate(clearancePayload.entryDate),
-                                    expiryDate: formatDate(clearancePayload.expiryDate)
-                                };
-                                const emailBody = generateNotificationEmail('approved', emailData);
                                 await sendEmail(data.requesterEmail, emailSubject, emailBody);
-                            } catch (emailError) {
-                                console.error("Approval email failed to send:", emailError);
-                                showNotification("Approval saved, but email notification failed.", "error");
+                            } catch (sendError) {
+                                console.error("Email sending simulation failed:", sendError);
+                                showNotification("Approval saved, but the email could not be sent.", "error");
                             }
                         } else {
                             console.warn("No requester email found for this request. Skipping notification.");
                             showNotification("Approval saved. Email not sent (no address on file).", "info");
                         }
-                        // --- End NEW Email Logic ---
+                        // --- End Email Logic ---
 
                         document.getElementById("modal-container").innerHTML = "";
 
@@ -3287,23 +3260,23 @@ const target = e.target;
                         }
 
                         if (savedPayload.ownerEmail && !editingId) {
+                            let emailBody;
                             try {
-                                showNotification("Sending clearance email...", "info");
-                                const emailSubject = `Vehicle Clearance Approved: ${savedPayload.vehicleNumber}`;
-                                const emailData = {
-                                    ownerName: savedPayload.ownerName,
-                                    vehicleNumber: savedPayload.vehicleNumber,
-                                    location: savedPayload.location,
-                                    entryDate: formatDate(savedPayload.entryDate),
-                                    expiryDate: formatDate(savedPayload.expiryDate)
-                                };
-                                const emailBody = generateNotificationEmail('approved', emailData);
+                                showNotification("Generating clearance email...", "info");
+                                const emailPrompt = `Generate a professional and friendly HTML email. The user's vehicle has been given clearance (Fast Track).
+                                - Recipient's Name: ${savedPayload.ownerName}
+                                - Vehicle Number: ${savedPayload.vehicleNumber}
+                                - Approved Location: ${savedPayload.location}
+                                - Validity Period: From ${formatDate(savedPayload.entryDate)} to ${formatDate(savedPayload.expiryDate)}.
+                                - Include a friendly closing.
+                                - The email should be well-formatted with HTML, using headings, bold text, and paragraphs for readability. Do not include any CSS or style tags.`;
+                                emailBody = await callGeminiApi(emailPrompt);
+                                const emailSubject = `Vehicle Clearance Confirmation: ${savedPayload.vehicleNumber}`;
                                 await sendEmail(savedPayload.ownerEmail, emailSubject, emailBody);
-                            } catch (emailError) {
-                                console.error("Approval email failed to send:", emailError);
-                                showNotification("Approval saved, but the email could not be sent.", "error");
+                            } catch (apiError) {
+                                console.error("Gemini API/Email failed for Fast Track:", apiError);
+                                showNotification("Clearance saved, but the notification email could not be sent.", "error");
                             }
-                        }
                         }
 
                         document.getElementById("modal-container").innerHTML = "";
@@ -3415,22 +3388,36 @@ const target = e.target;
                     showNotification("Error: Insufficient permissions for this action.", "error");
                 } else {
                     showNotification("An error occurred. Please try again.", "error");
- if (originalRequest.requesterEmail){
-    try {
-        showNotification("Sending rejection email...", "info");
-        const emailSubject = `Update on Vehicle Clearance Request: ${originalRequest.vehicleNumber}`;
-        const emailData = {
-            requesterName: originalRequest.requesterName,
-            vehicleNumber: originalRequest.vehicleNumber,
-            rejectionReason: rejectionReason.trim()
-        };
-        const emailBody = generateNotificationEmail('rejected', emailData);
-        await sendEmail(originalRequest.requesterEmail, emailSubject, emailBody);
-    } catch (emailError) {
-        console.error("Rejection email failed to send:", emailError);
-        showNotification("Rejection saved, but failed to send email notification.", "error");
-    }
-}dByUid: auth.currentUser?.uid
+                }
+            }
+        });
+
+        // --- Form submission event handler ---
+        document.body.addEventListener("submit", async (e) => {
+            e.preventDefault();
+            const form = e.target;
+            const button = form.querySelector('button[type="submit"]');
+            if (button) button.disabled = true;
+
+            try {
+                if (form.id === "rejection-form") {
+                    const { rejectionReason } = getFormObj(form);
+                    const requestId = form.querySelector('button[type="submit"]').dataset.id;
+                    if (!rejectionReason.trim()) {
+                        showNotification("Please provide a rejection reason.", "error");
+                        if (button) button.disabled = false;
+                        return;
+                    }
+
+                    const originalRequest = clearanceRequests.find(r => r.id === requestId);
+                    if (!originalRequest) { throw new Error("Could not find original request to process rejection."); }
+
+                    await updateDoc(doc(db, "clearanceRequests", requestId), {
+                        status: 'rejected',
+                        rejectionReason: rejectionReason.trim(),
+                        reviewedBy: `${currentAdminProfile.username} (${currentAdminProfile.designation})`,
+                        reviewedAt: Timestamp.now(),
+                        reviewedByUid: auth.currentUser?.uid
                     });
                     showNotification("Request rejected.");
 
@@ -3438,8 +3425,13 @@ const target = e.target;
                         try {
                             showNotification("Generating rejection email...", "info");
                             const emailSubject = `Update on Vehicle Clearance Request: ${originalRequest.vehicleNumber}`;
-                            
-                            const emailBody = generateNotificationEmail('pending', { vehicleNumber: (payload && payload.vehicleNumber) || (data && data.vehicleNumber) || '' });
+                            const emailPrompt = `Generate a professional and polite HTML email informing the user their vehicle clearance request has been REJECTED.
+                        - Recipient's Name: ${originalRequest.requesterName}
+                        - Vehicle Number: ${originalRequest.vehicleNumber}
+                        - Reason for rejection: "${rejectionReason.trim()}"
+                        - Include a closing that suggests they can submit a new request with corrected information if applicable.
+                        - The email should be well-formatted with HTML, using headings, bold text, and paragraphs for readability. Do not include any CSS or style tags.`;
+                            const emailBody = await callGeminiApi(emailPrompt);
                             await sendEmail(originalRequest.requesterEmail, emailSubject, emailBody);
                         } catch (emailError) {
                             console.error("Email notification failed:", emailError);
@@ -3601,28 +3593,35 @@ const target = e.target;
                     const payload = {
                         requesterName: data.requesterName,
                         requesterEmail: data.requesterEmail,
-                  // --- START: New Acknowledgment Email Logic ---
-if (payload.requesterEmail) {
-    try {
-        showNotification("Sending acknowledgment email...", "info");
-        const emailSubject = `Vehicle Clearance Request Received: ${payload.vehicleNumber}`;
-        const emailData = {
-            requesterName: payload.requesterName,
-            vehicleNumber: payload.vehicleNumber,
-            submittedAt: formatDate(payload.createdAt.toDate())
-        };
-        const emailBody = generateNotificationEmail('pending', emailData);
-        await sendEmail(payload.requesterEmail, emailSubject, emailBody);
-    } catch (emailError) {
-        console.error("Acknowledgment email failed to send:", emailError);
-        // Do not show an error to the user, as the main request was successful.
-    }
-}
-// --- END: New Acknowledgment Email Logic ---e(payload.createdAt.toDate())}
+                        requesterContact: data.requesterContact,
+                        requesterId: currentUser.uid,
+                        vehicleNumber: data.vehicleNumber.toUpperCase(),
+                        vehicleType: data.vehicleType,
+                        location: data.location === "Other" ? data.customLocation : data.location,
+                        timeSlot: data.timeSlot,
+                        entryDate: Timestamp.fromDate(entryDate),
+                        expiryDate: Timestamp.fromDate(expiryDate),
+                        escortRequired: !!data.escortRequired,
+                        notes: data.notes || "",
+                        status: "pending",
+                        createdAt: Timestamp.now()
+                    };
+                                        try {
+                        const docRef = await addDoc(collection(db, "clearanceRequests"), payload);
+
+                        // --- START: New Acknowledgment Email Logic ---
+                        if (payload.requesterEmail) {
+                            try {
+                                showNotification("Sending acknowledgment email...", "info");
+                                const emailSubject = `Vehicle Clearance Request Received: ${payload.vehicleNumber}`;
+                                const emailPrompt = `Generate a professional and friendly HTML email to acknowledge that a vehicle clearance request has been RECEIVED and is now PENDING review.
+- Recipient's Name: ${payload.requesterName}
+- Vehicle Number: ${payload.vehicleNumber}
+- Submitted On: ${formatDate(payload.createdAt.toDate())}
 - Mention that they will receive another email once the request is approved or rejected.
 - The email should be well-formatted with HTML, using headings, bold text, and paragraphs for readability. Do not include any CSS or style tags.`;
 
-                                const emailBody = generateNotificationEmail('pending', { vehicleNumber: (payload && payload.vehicleNumber) || (data && data.vehicleNumber) || '' });
+                                const emailBody = await callGeminiApi(emailPrompt);
                                 await sendEmail(payload.requesterEmail, emailSubject, emailBody);
                             } catch (emailError) {
                                 console.error("Acknowledgment email failed:", emailError);
