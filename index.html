@@ -3231,23 +3231,29 @@ const target = e.target;
 
                         showNotification(`Request approved by ${currentAdminProfile.username}`);
 
-                        // --- Start Email Logic ---
+                        // --- Start NEW Email Logic ---
                         if (data.requesterEmail) {
-                            let emailBody;
                             try {
-                                showNotification("Generating approval email content...", "info");
-                                const emailPrompt = `Generate a professional and friendly HTML email. The user's vehicle clearance request has been APPROVED.
-                            - Recipient's Name: ${data.ownerName}
-                            - Vehicle Number: ${clearancePayload.vehicleNumber}
-                            - Approved Location: ${clearancePayload.location}
-                            - Validity Period: From ${formatDate(clearancePayload.entryDate)} to ${formatDate(clearancePayload.expiryDate)}.
-                            - Include a friendly closing and mention that they can track their status online.
-                                     }
+                                showNotification("Sending approval email...", "info");
+                                const emailSubject = `Vehicle Clearance Approved: ${clearancePayload.vehicleNumber}`;
+                                const emailData = {
+                                    ownerName: clearancePayload.ownerName,
+                                    vehicleNumber: clearancePayload.vehicleNumber,
+                                    location: clearancePayload.location,
+                                    entryDate: formatDate(clearancePayload.entryDate),
+                                    expiryDate: formatDate(clearancePayload.expiryDate)
+                                };
+                                const emailBody = generateNotificationEmail('approved', emailData);
+                                await sendEmail(data.requesterEmail, emailSubject, emailBody);
+                            } catch (emailError) {
+                                console.error("Approval email failed to send:", emailError);
+                                showNotification("Approval saved, but email notification failed.", "error");
+                            }
                         } else {
                             console.warn("No requester email found for this request. Skipping notification.");
                             showNotification("Approval saved. Email not sent (no address on file).", "info");
                         }
-                        // --- End Email Logic ---
+                        // --- End NEW Email Logic ---
 
                         document.getElementById("modal-container").innerHTML = "";
 
@@ -3432,12 +3438,7 @@ const target = e.target;
                         try {
                             showNotification("Generating rejection email...", "info");
                             const emailSubject = `Update on Vehicle Clearance Request: ${originalRequest.vehicleNumber}`;
-                            const emailPrompt = `Generate a professional and polite HTML email informing the user their vehicle clearance request has been REJECTED.
-                        - Recipient's Name: ${originalRequest.requesterName}
-                        - Vehicle Number: ${originalRequest.vehicleNumber}
-                        - Reason for rejection: "${rejectionReason.trim()}"
-                        - Include a closing that suggests they can submit a new request with corrected information if applicable.
-                        - The email should be well-formatted with HTML, using headings, bold text, and paragraphs for readability. Do not include any CSS or style tags.`;
+                            
                             const emailBody = generateNotificationEmail('pending', { vehicleNumber: (payload && payload.vehicleNumber) || (data && data.vehicleNumber) || '' });
                             await sendEmail(originalRequest.requesterEmail, emailSubject, emailBody);
                         } catch (emailError) {
