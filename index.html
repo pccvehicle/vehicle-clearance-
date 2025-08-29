@@ -363,6 +363,63 @@
       const timeoutId = setTimeout(() => controller.abort(), 15000);
       const reqBody = { to, subject, htmlBody };
 
+
+// === Email Templates (Received / Approved / Rejected) ===
+
+// Build status-specific email body from a clearance-like object `c` and a `status`
+const buildStatusEmail = (c, status) => {
+  const data = {
+    name: c?.requesterName || c?.ownerName || '',
+    vehicleNumber: c?.vehicleNumber || '',
+    submittedAt: formatEmailDate(c?.createdAt || c?.entryDate),
+    requestId: c?.id || '-',
+    orgName: 'PCC Security'
+  };
+  switch ((status||'').toLowerCase()) {
+    case 'approved': return emailTpl.approved(data);
+    case 'rejected': return emailTpl.rejected(data);
+    default: return emailTpl.received(data);
+  }
+};
+
+
+const emailTpl = {
+  received: ({name, vehicleNumber, submittedAt, requestId, orgName}) => `
+    <h2>We’ve received your vehicle clearance request</h2>
+    <p>Hi ${name || 'there'},</p>
+    <p>Thanks for your submission. Your request for <strong>${(vehicleNumber||'N/A').toUpperCase()}</strong> was received on ${submittedAt || '—'} and is now <strong>pending review</strong>.</p>
+    <p>We’ll email you once it’s approved or if we need more information.</p>
+    <p>Reference: <strong>${requestId || '-'}</strong></p>
+    <p>Regards,<br>${orgName || 'PCC Security'} Team</p>
+  `,
+  approved: ({name, vehicleNumber, submittedAt, requestId, orgName}) => `
+    <h2>Your vehicle clearance request is approved</h2>
+    <p>Hi ${name || 'there'},</p>
+    <p>Good news! Your request for <strong>${(vehicleNumber||'N/A').toUpperCase()}</strong> submitted on ${submittedAt || '—'} has been <strong>approved</strong>.</p>
+    <p>You may now proceed with clearance as per the approved terms.</p>
+    <p>Reference: <strong>${requestId || '-'}</strong></p>
+    <p>Safe travels,<br>${orgName || 'PCC Security'} Team</p>
+  `,
+  rejected: ({name, vehicleNumber, submittedAt, requestId, orgName}) => `
+    <h2>Your vehicle clearance request could not be approved</h2>
+    <p>Hi ${name || 'there'},</p>
+    <p>We reviewed your request for <strong>${(vehicleNumber||'N/A').toUpperCase()}</strong> submitted on ${submittedAt || '—'}, but unfortunately it has been <strong>rejected</strong>.</p>
+    <p>If you’d like more details or to resubmit, please contact us.</p>
+    <p>Reference: <strong>${requestId || '-'}</strong></p>
+    <p>Regards,<br>${orgName || 'PCC Security'} Team</p>
+  `,
+};
+
+// Helper to format a short date (DD/MM/YY) from Timestamp/Date
+const formatEmailDate = (d) => {
+  if (!d) return '';
+  const obj = (d instanceof Date) ? d : (typeof d.toDate === 'function' ? d.toDate() : new Date(d));
+  return obj ? obj.toLocaleDateString('en-GB') : '';
+};
+
+
+
+
       window._lastEmailDebug = { step: 'sending', to, subject, htmlPreview: (htmlBody||'').slice(0, 400) };
       debugLog('Preparing to send email via VPS…', { url: VPS_API_URL, headers: ['Content-Type','x-api-key'], to, subject });
       try {
