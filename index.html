@@ -3962,12 +3962,18 @@ const waitForDb = (timeout = 5000) => {
 })();
 </script>
 
-<!-- BEGIN: Expiry Date Admin-Lock (auto-injected) -->
+
+
+<!-- BEGIN: Expiry Date Admin-Lock (v2) -->
 <script>
 (function(){
   try {
     const isAdmin = sessionStorage.getItem('isDashboardLogin') === 'true';
-    const applyLock = (el) => {
+    const getExpiry = () => document.getElementById('request-expiry-date') || document.getElementById('expiryDate');
+    const getEntry  = () => document.getElementById('request-entry-date') || document.getElementById('entryDate');
+
+    const lockExpiry = () => {
+      const el = getExpiry();
       if (!el) return;
       if (isAdmin) {
         el.removeAttribute('readonly');
@@ -3976,39 +3982,67 @@ const waitForDb = (timeout = 5000) => {
         el.title = '';
       } else {
         el.setAttribute('readonly','');
-        el.disabled = true;
+        el.disabled = true; // key: disables native date picker
         el.classList.add('bg-gray-700','text-gray-400','cursor-not-allowed');
         el.title = 'Expiry date is set by Admin';
       }
     };
 
-    const tryApply = () => applyLock(document.getElementById('expiryDate'));
+    const syncOnEntryChange = () => {
+      const entry = getEntry();
+      const expiry = getExpiry();
+      if (!entry || !expiry) return;
+      entry.addEventListener('change', () => {
+        // Example rule: next day expiry (keep your own logic if different)
+        if (!isAdmin) {
+          try {
+            const d = new Date(entry.value);
+            if (!isNaN(d)) {
+              // mirror  +1 day if your app expects this
+              d.setDate(d.getDate() + 1);
+              const iso = new Date(d.getTime() - d.getTimezoneOffset()*60000).toISOString().split('T')[0];
+              // temporarily enable to set value even if disabled
+              const wasDisabled = expiry.disabled;
+              expiry.disabled = false;
+              expiry.value = iso;
+              expiry.disabled = wasDisabled;
+            }
+          } catch(e){}
+        }
+      });
+    };
 
-    // Run on load and whenever DOM changes (covers SPA renders)
-    window.addEventListener('load', tryApply);
-    const mo = new MutationObserver(tryApply);
-    mo.observe(document.documentElement, { childList: true, subtree: true });
-
-    // Defensive: on submit of the request form, enforce expiry for non-admins
+    // Re-enable for serialization on submit (non-admin)
     document.addEventListener('submit', function(e){
       const form = e.target;
       if (!form || form.id !== 'request-form') return;
-      if (isAdmin) return;
-      const entry = form.querySelector('#entryDate');
-      const expiry = form.querySelector('#expiryDate');
-      if (expiry) {
-        // Temporarily enable to ensure the value is included in form serialization
-        expiry.disabled = false;
-        if (entry && entry.value) {
-          expiry.value = entry.value; // mirror entry date
+      const expiry = getExpiry();
+      const entry = getEntry();
+      if (!isAdmin && expiry) {
+        // ensure a value exists
+        if (entry && !expiry.value && entry.value) {
+          expiry.disabled = false;
+          expiry.value = entry.value;
+          expiry.disabled = true;
         }
+        // momentarily enable so value is captured
+        expiry.disabled = false;
+        setTimeout(() => expiry.disabled = true, 0);
       }
     }, true);
+
+    const init = () => {
+      lockExpiry();
+      syncOnEntryChange();
+    };
+
+    window.addEventListener('load', init);
+    new MutationObserver(init).observe(document.documentElement, {childList:true, subtree:true});
   } catch (err) {
     console.error('Expiry lock init error:', err);
   }
 })();
 </script>
-<!-- END: Expiry Date Admin-Lock (auto-injected) -->
+<!-- END: Expiry Date Admin-Lock (v2) -->
 </body>
 </html>
