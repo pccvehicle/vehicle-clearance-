@@ -3260,20 +3260,19 @@ const target = e.target;
                         }
 
                         if (savedPayload.ownerEmail && !editingId) {
-                            let emailBody;
-                            try {
-                                showNotification("Generating clearance email...", "info");
-                                const emailPrompt = `Generate a professional and friendly HTML email. The user's vehicle has been given clearance (Fast Track).
-                                - Recipient's Name: ${savedPayload.ownerName}
-                                - Vehicle Number: ${savedPayload.vehicleNumber}
-                                - Approved Location: ${savedPayload.location}
-                                - Validity Period: From ${formatDate(savedPayload.entryDate)} to ${formatDate(savedPayload.expiryDate)}.
-                                - Include a friendly closing.
-                                - The email should be well-formatted with HTML, using headings, bold text, and paragraphs for readability. Do not include any CSS or style tags.`;
-                                emailBody = await callGeminiApi(emailPrompt);
-                                const emailSubject = `Vehicle Clearance Confirmation: ${savedPayload.vehicleNumber}`;
-                                await sendEmail(savedPayload.ownerEmail, emailSubject, emailBody);
-                            } catch (apiError) {
+    try {
+        showNotification("Sending approval email...", "info");
+        const emailSubject = `Vehicle Clearance Approved: ${savedPayload.vehicleNumber}`;
+        const emailData = {
+            ownerName: savedPayload.ownerName,
+            vehicleNumber: savedPayload.vehicleNumber,
+            location: savedPayload.location,
+            entryDate: formatDate(savedPayload.entryDate),
+            expiryDate: formatDate(savedPayload.expiryDate)
+        };
+        const emailBody = generateNotificationEmail('approved', emailData);
+        await sendEmail(savedPayload.ownerEmail, emailSubject, emailBody);
+    } catch (apiError) {
                                 console.error("Gemini API/Email failed for Fast Track:", apiError);
                                 showNotification("Clearance saved, but the notification email could not be sent.", "error");
                             }
