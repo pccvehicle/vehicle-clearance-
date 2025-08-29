@@ -356,24 +356,38 @@
     });
 
     const sendEmail = async (to, subject, htmlBody) => {
-      const VPS_API_URL = 'https://email.th3va.com/send-email';
-      const YOUR_API_KEY = '83648:$/);&;84$:&;73638($'; // Keep in sync with your VPS .env
-      
-      const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 15000);
-      const reqBody = { to, subject, htmlBody };
+  const VPS_API_URL = 'https://email.th3va.com/send-email';
+  const YOUR_API_KEY = '83648:$/);&;84$:&;73638($'; // Keep in sync with your VPS .env
 
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), 15000);
 
-switch ((status||'').toLowerCase()) {
-    case 'approved': return emailTpl.approved(data);
-    case 'rejected': return emailTpl.rejected(data);
-    default: return emailTpl.received(data);
-  }
-};
-  switch ((status||'').toLowerCase()) {
-    case 'approved': return emailTpl.approved(data);
-    case 'rejected': return emailTpl.rejected(data);
-    default: return emailTpl.received(data);
+  try {
+    const response = await fetch(VPS_API_URL, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-api-key': YOUR_API_KEY
+      },
+      body: JSON.stringify({ to, subject, htmlBody }),
+      signal: controller.signal
+    });
+
+    const raw = await response.text();
+    let data = null;
+    try { data = JSON.parse(raw); } catch (_) {}
+
+    if (!response.ok) {
+      const msg = (data && (data.error || data.message)) ? (data.error || data.message) : raw;
+      throw new Error('Email service HTTP ' + response.status + ' — ' + (msg ? String(msg).slice(0, 300) : 'Unknown error'));
+    }
+
+    return true;
+  } catch (error) {
+    console.error('sendEmail failed:', error);
+    return false;
+  } finally {
+    clearTimeout(timeoutId);
   }
 };
 
@@ -408,14 +422,14 @@ const emailTpl = {
   `,
 };
 
-// Helper to format a short date (DD/MM/YY) from Timestamp/Date
+// Helper to format a short date (DD/MM/YY)
 const formatEmailDate = (d) => {
   if (!d) return '';
   const obj = (d instanceof Date) ? d : (typeof d.toDate === 'function' ? d.toDate() : new Date(d));
   return obj ? obj.toLocaleDateString('en-GB') : '';
 };
 
-// Build status-specific email body from a clearance-like object `c` and a `status`
+// Build status-specific email body from a clearance `c` and a `status`
 const buildStatusEmail = (c, status) => {
   const data = {
     name: c?.requesterName || c?.ownerName || '',
@@ -427,49 +441,25 @@ const buildStatusEmail = (c, status) => {
     validity: c?.validity || c?.validityPeriod || '',
     statusUrl: c?.statusUrl || ''
   };
-  
-
-
-
-
-const emailTpl = {
-  received: ({name, vehicleNumber, submittedAt, requestId, orgName}) => `
-    <h2>We’ve received your vehicle clearance request</h2>
-    <p>Hi ${name || 'there'},</p>
-    <p>Thanks for your submission. Your request for <strong>${(vehicleNumber||'N/A').toUpperCase()}</strong> was received on ${submittedAt || '—'} and is now <strong>pending review</strong>.</p>
-    <p>We’ll email you once it’s approved or if we need more information.</p>
-    <p>Reference: <strong>${requestId || '-'}</strong></p>
-    <p>Regards,<br>${orgName || 'PCC Security'} Team</p>
-  `,
-  approved: ({name, vehicleNumber, submittedAt, requestId, orgName}) => `
-    <h2>Your vehicle clearance request is approved</h2>
-    <p>Hi ${name || 'there'},</p>
-    <p>Good news! Your request for <strong>${(vehicleNumber||'N/A').toUpperCase()}</strong> submitted on ${submittedAt || '—'} has been <strong>approved</strong>.</p>
-    <p>You may now proceed with clearance as per the approved terms.</p>
-    <p>Reference: <strong>${requestId || '-'}</strong></p>
-    <p>Safe travels,<br>${orgName || 'PCC Security'} Team</p>
-  `,
-  rejected: ({name, vehicleNumber, submittedAt, requestId, orgName}) => `
-    <h2>Your vehicle clearance request could not be approved</h2>
-    <p>Hi ${name || 'there'},</p>
-    <p>We reviewed your request for <strong>${(vehicleNumber||'N/A').toUpperCase()}</strong> submitted on ${submittedAt || '—'}, but unfortunately it has been <strong>rejected</strong>.</p>
-    <p>If you’d like more details or to resubmit, please contact us.</p>
-    <p>Reference: <strong>${requestId || '-'}</strong></p>
-    <p>Regards,<br>${orgName || 'PCC Security'} Team</p>
-  `,
+  switch ((status||'').toLowerCase()) {
+    case 'approved': return emailTpl.approved(data);
+    case 'rejected': return emailTpl.rejected(data);
+    default: return emailTpl.received(data);
+  }
 };
+
+  switch ((status||'').toLowerCase()) {
+    case 'approved': return emailTpl.approved(data);
+    case 'rejected': return emailTpl.rejected(data);
+    default: return emailTpl.received(data);
+  }
+};
+
 
 // Helper to format a short date (DD/MM/YY) from Timestamp/Date
-const formatEmailDate = (d) => {
-  if (!d) return '';
-  const obj = (d instanceof Date) ? d : (typeof d.toDate === 'function' ? d.toDate() : new Date(d));
-  return obj ? obj.toLocaleDateString('en-GB') : '';
-};
-
-
-
-
-      window._lastEmailDebug = { step: 'sending', to, subject, htmlPreview: (htmlBody||'').slice(0, 400) };
+// Build status-specific email body from a clearance-like object `c` and a `status`
+// Helper to format a short date (DD/MM/YY) from Timestamp/Date
+window._lastEmailDebug = { step: 'sending', to, subject, htmlPreview: (htmlBody||'').slice(0, 400) };
       debugLog('Preparing to send email via VPS…', { url: VPS_API_URL, headers: ['Content-Type','x-api-key'], to, subject });
       try {
         const response = await
