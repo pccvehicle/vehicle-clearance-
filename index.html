@@ -365,6 +365,42 @@
 
 
 // === Email Templates (Received / Approved / Rejected) ===
+const emailTpl = {
+  received: ({name, vehicleNumber, submittedAt, requestId, orgName, statusUrl}) => `
+    <h2>We’ve received your vehicle clearance request</h2>
+    <p>Hi ${name || 'there'},</p>
+    <p>Thanks for your submission. Your request for <strong>${(vehicleNumber||'N/A').toUpperCase()}</strong> was received on ${submittedAt || '—'} and is now <strong>pending review</strong>.</p>
+    ${statusUrl ? `<p>You can track your request here: <a href="${statusUrl}">${statusUrl}</a></p>` : ''}
+    <p>Reference: <strong>${requestId || '-'}</strong></p>
+    <p>Regards,<br>${orgName || 'PCC Security'} Team</p>
+  `,
+  approved: ({name, vehicleNumber, submittedAt, requestId, orgName, location, validity, statusUrl}) => `
+    <h2>Your vehicle clearance request is approved</h2>
+    <p>Hi ${name || 'there'},</p>
+    <p>Good news! Your request for <strong>${(vehicleNumber||'N/A').toUpperCase()}</strong> submitted on ${submittedAt || '—'} has been <strong>approved</strong>.</p>
+    ${location ? `<p>Approved Location: <strong>${location}</strong></p>` : ''}
+    ${validity ? `<p>Validity: ${validity}</p>` : ''}
+    ${statusUrl ? `<p>You can view your status here: <a href="${statusUrl}">${statusUrl}</a></p>` : ''}
+    <p>Reference: <strong>${requestId || '-'}</strong></p>
+    <p>Safe travels,<br>${orgName || 'PCC Security'} Team</p>
+  `,
+  rejected: ({name, vehicleNumber, submittedAt, requestId, orgName, reason, statusUrl}) => `
+    <h2>Your vehicle clearance request could not be approved</h2>
+    <p>Hi ${name || 'there'},</p>
+    <p>We reviewed your request for <strong>${(vehicleNumber||'N/A').toUpperCase()}</strong> submitted on ${submittedAt || '—'}, but unfortunately it has been <strong>rejected</strong>.</p>
+    ${reason ? `<p><strong>Reason:</strong> ${reason}</p>` : ''}
+    ${statusUrl ? `<p>You may review or resubmit here: <a href="${statusUrl}">${statusUrl}</a></p>` : ''}
+    <p>Reference: <strong>${requestId || '-'}</strong></p>
+    <p>Regards,<br>${orgName || 'PCC Security'} Team</p>
+  `,
+};
+
+// Helper to format a short date (DD/MM/YY) from Timestamp/Date
+const formatEmailDate = (d) => {
+  if (!d) return '';
+  const obj = (d instanceof Date) ? d : (typeof d.toDate === 'function' ? d.toDate() : new Date(d));
+  return obj ? obj.toLocaleDateString('en-GB') : '';
+};
 
 // Build status-specific email body from a clearance-like object `c` and a `status`
 const buildStatusEmail = (c, status) => {
@@ -373,8 +409,17 @@ const buildStatusEmail = (c, status) => {
     vehicleNumber: c?.vehicleNumber || '',
     submittedAt: formatEmailDate(c?.createdAt || c?.entryDate),
     requestId: c?.id || '-',
-    orgName: 'PCC Security'
+    orgName: 'PCC Security',
+    location: c?.location || c?.approvedLocation || '',
+    validity: c?.validity || c?.validityPeriod || '',
+    statusUrl: c?.statusUrl || ''
   };
+  switch ((status||'').toLowerCase()) {
+    case 'approved': return emailTpl.approved(data);
+    case 'rejected': return emailTpl.rejected(data);
+    default: return emailTpl.received(data);
+  }
+};
   switch ((status||'').toLowerCase()) {
     case 'approved': return emailTpl.approved(data);
     case 'rejected': return emailTpl.rejected(data);
