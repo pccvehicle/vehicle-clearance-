@@ -3645,18 +3645,17 @@ await sendEmail(originalRequest.requesterEmail, emailSubject, emailBody);
                         if (payload.requesterEmail) {
                             try {
                                 showNotification("Sending acknowledgment email...", "info");
-                                const emailSubject = `Request Update: ${originalRequest.vehicleNumber}`;
-const emailData = {
-    requesterName: originalRequest.requesterName,
-    vehicleNumber: originalRequest.vehicleNumber,
-    rejectionReason: rejectionReason.trim()
-};
-const emailBody = generateNotificationEmail('rejected', emailData);
-await sendEmail(payload.requesterEmail, emailSubject, emailBody);
+                                const emailSubject = `Request Received: ${payload.vehicleNumber}`;
+                                const emailData = {
+                                    requesterName: payload.requesterName,
+                                    vehicleNumber: payload.vehicleNumber,
+                                    submittedAt: new Date().toLocaleString()
+                                };
+                                const emailBody = generateNotificationEmail('pending', emailData);
+                                await sendEmail(payload.requesterEmail, emailSubject, emailBody);
                             } catch (emailError) {
                                 console.error("Acknowledgment email failed:", emailError);
-                                // This error is logged to the console but not shown to the user,
-                                // as the primary action (saving the request) was successful.
+                                // Do not block the main flow if email fails
                             }
                         }
                         // --- END: New Acknowledgment Email Logic ---
