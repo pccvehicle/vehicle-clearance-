@@ -3961,5 +3961,54 @@ const waitForDb = (timeout = 5000) => {
   wireOnlyInAdmin();
 })();
 </script>
+
+<!-- BEGIN: Expiry Date Admin-Lock (auto-injected) -->
+<script>
+(function(){
+  try {
+    const isAdmin = sessionStorage.getItem('isDashboardLogin') === 'true';
+    const applyLock = (el) => {
+      if (!el) return;
+      if (isAdmin) {
+        el.removeAttribute('readonly');
+        el.disabled = false;
+        el.classList.remove('bg-gray-700','text-gray-400','cursor-not-allowed');
+        el.title = '';
+      } else {
+        el.setAttribute('readonly','');
+        el.disabled = true;
+        el.classList.add('bg-gray-700','text-gray-400','cursor-not-allowed');
+        el.title = 'Expiry date is set by Admin';
+      }
+    };
+
+    const tryApply = () => applyLock(document.getElementById('expiryDate'));
+
+    // Run on load and whenever DOM changes (covers SPA renders)
+    window.addEventListener('load', tryApply);
+    const mo = new MutationObserver(tryApply);
+    mo.observe(document.documentElement, { childList: true, subtree: true });
+
+    // Defensive: on submit of the request form, enforce expiry for non-admins
+    document.addEventListener('submit', function(e){
+      const form = e.target;
+      if (!form || form.id !== 'request-form') return;
+      if (isAdmin) return;
+      const entry = form.querySelector('#entryDate');
+      const expiry = form.querySelector('#expiryDate');
+      if (expiry) {
+        // Temporarily enable to ensure the value is included in form serialization
+        expiry.disabled = false;
+        if (entry && entry.value) {
+          expiry.value = entry.value; // mirror entry date
+        }
+      }
+    }, true);
+  } catch (err) {
+    console.error('Expiry lock init error:', err);
+  }
+})();
+</script>
+<!-- END: Expiry Date Admin-Lock (auto-injected) -->
 </body>
 </html>
