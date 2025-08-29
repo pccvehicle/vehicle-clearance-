@@ -469,6 +469,7 @@
         fillerWords.forEach(word => {
             processed = processed.replace(new RegExp(`\\b${word}\\b`, 'gi'), ' ');
 
+        });
         const numberMappings = [
             ['zero', '0'], ['oh', '0'], ['o', '0'], ['one', '1'], ['won', '1'],
             ['two', '2'], ['to', '2'], ['too', '2'], ['three', '3'], ['tree', '3'],
