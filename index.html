@@ -350,10 +350,9 @@
     // Graceful global error visibility for debugging
     window.addEventListener('unhandledrejection', (e) => {
         debugLog('Unhandled promise rejection:', e.reason);
-    });
+
     window.addEventListener('error', (e) => {
         debugLog('Window error:', e.message || e.error);
-    });
 
     const sendEmail = async (to, subject, htmlBody) => {
       const VPS_API_URL = 'https://email.th3va.com/send-email';
@@ -377,7 +376,6 @@
     to, subject,
     htmlBody
   }),
-});				
 
         const raw = await response.text();
         debugLog('Email service raw response (first 500 chars):', raw.slice(0, 500));
@@ -474,7 +472,6 @@
         const fillerWords = ['um', 'uh', 'the', 'number', 'is', 'vehicle', 'car', 'plate'];
         fillerWords.forEach(word => {
             processed = processed.replace(new RegExp(`\\b${word}\\b`, 'gi'), ' ');
-        });
 
         const numberMappings = [
             ['zero', '0'], ['oh', '0'], ['o', '0'], ['one', '1'], ['won', '1'],
@@ -485,7 +482,6 @@
         ];
         numberMappings.forEach(([word, digit]) => {
             processed = processed.replace(new RegExp(`\\b${word}\\b`, 'gi'), ` ${digit} `);
-        });
 
         const digitMatches = processed.match(/\d+/g);
         return digitMatches ? digitMatches.join('') : '';
@@ -604,7 +600,7 @@
                         latitude: position.coords.latitude,
                         longitude: position.coords.longitude,
                         accuracy: position.coords.accuracy
-                    });
+
                 },
                 (error) => {
                     let errorMessage;
@@ -626,7 +622,7 @@
                 },
                 options
             );
-        });
+
     };
 
     const validateUserID = async (userID) => {
@@ -738,7 +734,7 @@
         try {
             await updateDoc(doc(db, "authorizedUsers", authorizedUserId), {
                 lastUsed: Timestamp.now()
-            });
+
         } catch (error) {
             console.error("Error updating last used:", error);
         }
@@ -776,7 +772,7 @@
             year: 'numeric',
             month: 'long',
             day: 'numeric'
-        });
+
     };
 
     const formatVehicleNumber = (vehicleNumber) => {
@@ -791,7 +787,7 @@
                 hour: '2-digit',
                 minute: '2-digit',
                 hour12: false
-            });
+
             return `Approved by ${clearance.approvedByUsername} (${clearance.approvedByDesignation || 'Admin'}) on ${date} at ${time}hrs`;
         }
         return null;
@@ -804,7 +800,7 @@
                 hour: '2-digit',
                 minute: '2-digit',
                 hour12: false
-            });
+
             return `Last updated by ${clearance.lastUpdatedByUsername} (${clearance.lastUpdatedByDesignation || 'Admin'}) on ${date} at ${time}hrs`;
         }
         return null;
@@ -821,7 +817,7 @@
                 hour: '2-digit',
                 minute: '2-digit',
                 hour12: false
-            });
+
             const actionText = entry.action.charAt(0).toUpperCase() + entry.action.slice(1);
             return `${actionText} by ${entry.byUsername} (${entry.byDesignation}) on ${date} at ${time}hrs`;
         }).join('<br>');
@@ -905,10 +901,10 @@
             unsubClearances = onSnapshot(collection(db, "vehicleClearances"), snap => {
                 clearances = snap.docs.map(d => ({ id: d.id, ...d.data() }));
                 renderUserDashboard(user);
-            });
+
             unsubVVIPs = onSnapshot(query(collection(db, "vvips"), orderBy("vehicleNumber")), snap => {
                 vvips = snap.docs.map(d => ({ id: d.id, ...d.data() }));
-            });
+
         };
         // --- PDF Generation Function ---
         const generatePDFReport = async (button) => {
@@ -926,7 +922,6 @@
                     orientation: "portrait",
                     unit: "mm",
                     format: "a4"
-                });
 
                 const now = new Date();
                 const twentyFourHoursAgo = new Date(now.getTime() - (24 * 60 * 60 * 1000));
@@ -981,7 +976,6 @@
                         status
                     ]);
                     processedVehicleNumbers.add(c.vehicleNumber);
-                });
 
                 const requestsQuery = query(
                     collection(db, "clearanceRequests"),
@@ -1008,7 +1002,6 @@
                         ]);
                         processedVehicleNumbers.add(r.vehicleNumber);
                     }
-                });
 
                 doc.setFontSize(20);
                 doc.setFont(undefined, 'bold');
@@ -1109,7 +1102,7 @@
                                 }
                             }
                         }
-                    });
+
                 }
 
                 const finalY = doc.lastAutoTable ? doc.lastAutoTable.finalY + 20 : 65;
@@ -1232,9 +1225,9 @@
                             if (data[key] && typeof data[key].toDate === 'function') {
                                 data[key] = data[key].toDate().toISOString();
                             }
-                        });
+
                         exportData.collections[collectionName].push({ id: doc.id, ...data });
-                    });
+
                 }
 
                 const dataStr = JSON.stringify(exportData, null, 2);
@@ -1638,7 +1631,6 @@
                     const expiryDate = data.expiryDate.toDate();
                     expiryDate.setHours(23, 59, 59, 999);
                     return expiryDate >= now;
-                });
 
                 if (activeClearance) {
                     return { ...activeClearance, status: "active" };
@@ -1648,7 +1640,6 @@
                 const mostRecentRequest = allRequests.find(data => {
                     const createdAt = data.createdAt ? data.createdAt.toDate() : new Date(0);
                     return data.status !== 'rejected' || createdAt >= sevenDaysAgo;
-                });
 
                 if (mostRecentRequest) {
                     return mostRecentRequest;
@@ -1679,7 +1670,6 @@
                 const expiryDate = c.expiryDate.toDate();
                 expiryDate.setHours(23, 59, 59, 999);
                 return today >= entryDate && today <= expiryDate;
-            });
 
             if (vehicleFilter) {
                 dailyClearances = dailyClearances.filter(c => c.vehicleNumber.includes(vehicleFilter));
@@ -2032,7 +2022,6 @@
 unsubClearances = onSnapshot(query(collection(db, "vehicleClearances"), orderBy("entryDate", "desc")), snap => {
                 clearances = snap.docs.map(d => ({ id: d.id, ...d.data() }));
                 renderClearancesList();
-            });
 
             const requestsQuery = query(collection(db, "clearanceRequests"), orderBy("createdAt", "desc"));
             unsubRequests = onSnapshot(requestsQuery, snap => {
@@ -2045,7 +2034,6 @@ unsubClearances = onSnapshot(query(collection(db, "vehicleClearances"), orderBy(
                     badge.textContent = clearanceRequests.length;
                     badge.classList.toggle('hidden', clearanceRequests.length === 0);
                 }
-            });
 
             renderVVIPListForSettings();
             renderAuthorizedUsersList();
@@ -2095,7 +2083,6 @@ const renderRequestsList = () => {
                 const expiryDate = c.expiryDate.toDate();
                 expiryDate.setHours(23, 59, 59, 999);
                 return expiryDate >= now;
-            });
 
             if (activeClearances.length === 0) {
                 list.innerHTML = `<div class="col-span-full text-center p-8 text-gray-500 dark:text-gray-400 bg-gray-50 dark:bg-gray-800/50 rounded-lg border dark:border-gray-700">No active clearances found. Add one to get started!</div>`;
@@ -2412,7 +2399,7 @@ const renderRequestsList = () => {
   }
 
   wireOnlyInAdmin();
-})();
+;
 </script>
 </body>
 </html>
