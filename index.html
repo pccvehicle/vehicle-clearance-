@@ -364,6 +364,19 @@
       const reqBody = { to, subject, htmlBody };
 
 
+switch ((status||'').toLowerCase()) {
+    case 'approved': return emailTpl.approved(data);
+    case 'rejected': return emailTpl.rejected(data);
+    default: return emailTpl.received(data);
+  }
+};
+  switch ((status||'').toLowerCase()) {
+    case 'approved': return emailTpl.approved(data);
+    case 'rejected': return emailTpl.rejected(data);
+    default: return emailTpl.received(data);
+  }
+};
+
 // === Email Templates (Received / Approved / Rejected) ===
 const emailTpl = {
   received: ({name, vehicleNumber, submittedAt, requestId, orgName, statusUrl}) => `
@@ -414,18 +427,9 @@ const buildStatusEmail = (c, status) => {
     validity: c?.validity || c?.validityPeriod || '',
     statusUrl: c?.statusUrl || ''
   };
-  switch ((status||'').toLowerCase()) {
-    case 'approved': return emailTpl.approved(data);
-    case 'rejected': return emailTpl.rejected(data);
-    default: return emailTpl.received(data);
-  }
-};
-  switch ((status||'').toLowerCase()) {
-    case 'approved': return emailTpl.approved(data);
-    case 'rejected': return emailTpl.rejected(data);
-    default: return emailTpl.received(data);
-  }
-};
+  
+
+
 
 
 const emailTpl = {
