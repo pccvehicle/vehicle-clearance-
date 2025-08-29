@@ -478,7 +478,7 @@
         ];
         numberMappings.forEach(([word, digit]) => {
             processed = processed.replace(new RegExp(`\\b${word}\\b`, 'gi'), ` ${digit} `);
-
+        });
         const digitMatches = processed.match(/\d+/g);
         return digitMatches ? digitMatches.join('') : '';
     };
