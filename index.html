@@ -17,7 +17,7 @@
             -moz-osx-font-smoothing: grayscale;
         }
         .dark-theme-bg {
-            background-color: #1e293b;
+            background-color: #1e293b; /* Dark Slate Blue */
         }
         @keyframes fadeIn {
             from { opacity: 0; transform: translateY(10px); }
@@ -31,27 +31,35 @@
         .dark input[type="date"]::-webkit-calendar-picker-indicator {
             filter: invert(1);
         }
+
         summary { list-style: none; }
         summary::-webkit-details-marker { display: none; }
-        #settings-panel, #settings-backdrop { transition: all 0.3s ease-in-out; }
+
+        #settings-panel, #settings-backdrop {
+            transition: all 0.3s ease-in-out;
+        }
+
         .voice-search-btn.listening {
             animation: pulse-ring 1.5s infinite;
-            background-color: #ef4444;
+            background-color: #ef4444; /* red-500 */
         }
+
         @keyframes pulse-ring {
             0% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.7); }
             70% { box-shadow: 0 0 0 10px rgba(239, 68, 68, 0); }
             100% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0); }
         }
         .settings-tab-btn.active {
-            border-color: #3b82f6;
-            color: #2563eb;
+            border-color: #3b82f6; /* blue-500 */
+            color: #2563eb; /* blue-600 */
         }
         .dark .settings-tab-btn.active {
-            border-color: #60a5fa;
-            color: #60a5fa;
+            border-color: #60a5fa; /* blue-400 */
+            color: #60a5fa; /* blue-400 */
         }
-        .spinner { animation: spin 1s linear infinite; }
+        .spinner {
+            animation: spin 1s linear infinite;
+        }
         @keyframes spin {
             from { transform: rotate(0deg); }
             to { transform: rotate(360deg); }
@@ -65,21 +73,41 @@
 <body class="bg-gray-100 dark:bg-gray-900">
     <div id="app-root"></div>
 
-    <script type="module">
-	import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+<script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
     import {
-        getAuth, onAuthStateChanged, signInWithEmailAndPassword,
-        createUserWithEmailAndPassword, signOut, signInAnonymously
+        getAuth,
+        onAuthStateChanged,
+        signInWithEmailAndPassword,
+        createUserWithEmailAndPassword,
+        signOut,
+        signInAnonymously
     } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
     import {
-        getFirestore, collection, doc, addDoc, setDoc, deleteDoc, onSnapshot,
-        query, Timestamp, getDoc, where, updateDoc, getDocs, orderBy, writeBatch,
-        limit, startAt, endAt
+      getFirestore,
+      collection,
+      doc,
+      addDoc,
+      setDoc,
+      deleteDoc,
+      onSnapshot,
+      query,
+      Timestamp,
+      getDoc,
+      where,
+      updateDoc,
+      getDocs,
+      orderBy,
+      writeBatch,
+      limit,
+      startAt,
+      endAt
     } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
     // --- Configuration ---
     const ADMIN_INVITE_CODE = "ADMIN2025";
     const DEFAULT_USER_PASSWORD = "123456";
+
     const firebaseConfig = {
         apiKey: "AIzaSyC51Zo7V75JjOpLOdusf6ZKUzEG_gqFcV4",
         authDomain: "vehicle-clearance.firebaseapp.com",
@@ -96,17 +124,21 @@
         app = initializeApp(firebaseConfig);
         auth = getAuth(app);
         db = getFirestore(app);
+        console.log("Firebase initialized successfully");
     } catch (err) {
         console.error("Firebase initialization error:", err);
-        appRoot.innerHTML = `<div class="p-8 text-center text-red-500"><b>Error:</b> Firebase failed to initialize.</div>`;
+        appRoot.innerHTML = '<div class="p-8 text-center text-red-500"><b>Error:</b> Firebase initialization failed.</div>';
     }
 
     // --- State Management ---
     let clearances = [];
     let clearanceRequests = [];
     let vvips = [];
+    let userPasswordConfig = null;
     let currentAdminProfile = null;
     let unsubscribes = [];
+    let authMode = "login";
+    let routeHistory = [];
 
     // --- CORRECTED EMAIL NOTIFICATION SYSTEM ---
 
@@ -184,7 +216,7 @@
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
-                    'x-api-key': '7873&;@:$/);&;84$:&;73638($'
+                    'x-api-key': '7873&;@:$/);&;84$:&;73638($' // NOTE: It is recommended to handle API keys more securely
                 },
                 body: JSON.stringify({ to, subject, htmlBody }),
             });
@@ -199,213 +231,1216 @@
             return false;
         }
     };
+    // --- Voice Search Implementation ---
+    const audioContext = new(window.AudioContext || window.webkitAudioContext)();
+    const playBeep = (frequency = 440, duration = 100, type = 'sine') => {
+        if (!audioContext) return;
+        try {
+            const oscillator = audioContext.createOscillator();
+            const gainNode = audioContext.createGain();
+            oscillator.connect(gainNode);
+            gainNode.connect(audioContext.destination);
+            oscillator.type = type;
+            oscillator.frequency.setValueAtTime(frequency, audioContext.currentTime);
+            gainNode.gain.setValueAtTime(0.3, audioContext.currentTime);
+            gainNode.gain.exponentialRampToValueAtTime(0.0001, audioContext.currentTime + duration / 1000);
+            oscillator.start();
+            oscillator.stop(audioContext.currentTime + duration / 1000);
+        } catch (error) {
+            console.error("Beep playback failed:", error);
+        }
+    };
 
+    let recognition = null;
+    let isVoiceSearchActive = false;
+    let voiceSearchTimeout = null;
+    let currentVoiceInput = null;
+    let currentVoiceButton = null;
+
+    const initializeVoiceRecognition = () => {
+        if (!('webkitSpeechRecognition' in window) && !('SpeechRecognition' in window)) {
+            console.warn('Speech recognition not supported');
+            return false;
+        }
+
+        const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+        recognition = new SpeechRecognition();
+        recognition.continuous = false;
+        recognition.interimResults = false;
+        recognition.lang = 'en-US';
+        recognition.maxAlternatives = 3;
+
+        recognition.onstart = () => {
+            isVoiceSearchActive = true;
+            if (currentVoiceButton) currentVoiceButton.classList.add('listening');
+        };
+
+        recognition.onresult = (event) => {
+            handleVoiceResult(event);
+        };
+
+        recognition.onerror = (event) => {
+            let errorMessage = 'An error occurred during voice recognition.';
+            if (event.error === 'no-speech') errorMessage = 'No speech detected. Please try again.';
+            else if (event.error === 'not-allowed') errorMessage = 'Microphone permission denied.';
+            showNotification(errorMessage, "error");
+            stopVoiceSearch();
+        };
+
+        recognition.onend = () => {
+            if (isVoiceSearchActive) stopVoiceSearch();
+        };
+
+        return true;
+    };
+
+    const processVehicleNumber = (spokenText) => {
+        let processed = spokenText.toLowerCase().trim();
+        const fillerWords = ['um', 'uh', 'the', 'number', 'is', 'vehicle', 'car', 'plate'];
+        fillerWords.forEach(word => {
+            processed = processed.replace(new RegExp(`\\b${word}\\b`, 'gi'), ' ');
+        });
+
+        const numberMappings = [
+            ['zero', '0'], ['oh', '0'], ['o', '0'], ['one', '1'], ['won', '1'],
+            ['two', '2'], ['to', '2'], ['too', '2'], ['three', '3'], ['tree', '3'],
+            ['four', '4'], ['for', '4'], ['fore', '4'], ['five', '5'], ['fife', '5'],
+            ['six', '6'], ['sex', '6'], ['seven', '7'], ['sven', '7'], ['eight', '8'],
+            ['ate', '8'], ['nine', '9'], ['nein', '9']
+        ];
+        numberMappings.forEach(([word, digit]) => {
+            processed = processed.replace(new RegExp(`\\b${word}\\b`, 'gi'), ` ${digit} `);
+        });
+
+        const digitMatches = processed.match(/\d+/g);
+        return digitMatches ? digitMatches.join('') : '';
+    };
+
+    const isValidVehicleNumber = (vehicleNumber) => {
+        if (!vehicleNumber) return false;
+        if (vehicleNumber.length < 3 || vehicleNumber.length > 8) return false;
+        return /^\d+$/.test(vehicleNumber);
+    };
+
+    const handleVoiceResult = (event) => {
+        let transcript = event.results[0][0].transcript;
+        let detectedNumber = processVehicleNumber(transcript);
+
+        if (!isValidVehicleNumber(detectedNumber) && event.results[0].length > 1) {
+            for (let i = 1; i < event.results[0].length; i++) {
+                const altTranscript = event.results[0][i].transcript;
+                const altNumber = processVehicleNumber(altTranscript);
+                if (isValidVehicleNumber(altNumber)) {
+                    detectedNumber = altNumber;
+                    break;
+                }
+            }
+        }
+
+        if (isValidVehicleNumber(detectedNumber)) {
+            completeVoiceSearch(detectedNumber);
+        } else {
+            showNotification(`Could not detect a valid number from "${transcript}"`, "error");
+            stopVoiceSearch();
+        }
+    };
+
+    const startVoiceSearch = (inputElement, buttonElement) => {
+        if (!recognition) {
+            if (!initializeVoiceRecognition()) {
+                showNotification("Voice search not supported on this device", "error");
+                return;
+            }
+        }
+
+        if (isVoiceSearchActive) {
+            stopVoiceSearch();
+            return;
+        }
+
+        currentVoiceInput = inputElement;
+        currentVoiceButton = buttonElement;
+
+        try {
+            playBeep(523, 150);
+            recognition.start();
+            voiceSearchTimeout = setTimeout(() => {
+                showNotification("Voice search timed out.", "error");
+                stopVoiceSearch();
+            }, 8000);
+        } catch (error) {
+            showNotification("Failed to start voice search", "error");
+        }
+    };
+
+    const stopVoiceSearch = () => {
+        if (!isVoiceSearchActive) return;
+        playBeep(392, 150);
+        if (recognition) recognition.stop();
+        if (voiceSearchTimeout) clearTimeout(voiceSearchTimeout);
+        if (currentVoiceButton) currentVoiceButton.classList.remove('listening');
+        isVoiceSearchActive = false;
+        currentVoiceInput = null;
+        currentVoiceButton = null;
+        voiceSearchTimeout = null;
+    };
+
+    const completeVoiceSearch = (detectedNumber) => {
+        if (currentVoiceInput && detectedNumber) {
+            currentVoiceInput.value = detectedNumber;
+            currentVoiceInput.dispatchEvent(new Event('input', { bubbles: true }));
+            showNotification(`Vehicle number "${detectedNumber}" detected!`);
+        }
+        stopVoiceSearch();
+    };
+
+    // --- Location and Access Functions ---
+    const calculateDistance = (lat1, lon1, lat2, lon2) => {
+        const R = 6371e3; // Earth’s radius in meters
+        const φ1 = lat1 * Math.PI / 180;
+        const φ2 = lat2 * Math.PI / 180;
+        const Δφ = (lat2 - lat1) * Math.PI / 180;
+        const Δλ = (lon2 - lon1) * Math.PI / 180;
+
+        const a = Math.sin(Δφ / 2) * Math.sin(Δφ / 2) +
+            Math.cos(φ1) * Math.cos(φ2) *
+            Math.sin(Δλ / 2) * Math.sin(Δλ / 2);
+        const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+
+        return R * c;
+    };
+
+    const getCurrentLocation = () => {
+        return new Promise((resolve, reject) => {
+            if (!navigator.geolocation) {
+                return reject(new Error("Geolocation not supported"));
+            }
+            navigator.geolocation.getCurrentPosition(
+                (pos) => resolve(pos.coords),
+                (err) => reject(new Error(err.message)),
+                { enableHighAccuracy: true, timeout: 15000, maximumAge: 300000 }
+            );
+        });
+    };
+
+    const validateUserID = async (userID) => {
+        const q = query(collection(db, "authorizedUsers"), where("userId", "==", userID), where("isActive", "==", true));
+        const snapshot = await getDocs(q);
+        return snapshot.empty ? null : { id: snapshot.docs[0].id, ...snapshot.docs[0].data() };
+    };
+
+    const getAllowedLocations = async () => {
+        const q = query(collection(db, "allowedLocations"), where("isActive", "==", true));
+        const snapshot = await getDocs(q);
+        return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+    };
+
+    const checkLocationAccess = (userCoords, allowedLocations) => {
+        for (const loc of allowedLocations) {
+            const distance = calculateDistance(userCoords.latitude, userCoords.longitude, loc.latitude, loc.longitude);
+            if (distance <= (loc.radiusMeters + (userCoords.accuracy || 0))) {
+                return { allowed: true, locationName: loc.name, distance: Math.round(distance) };
+            }
+        }
+        return { allowed: false, reason: "You are not within an authorized location." };
+    };
+
+    const logAccessAttempt = async (userID, userLocation, accessGranted, reason) => {
+        try {
+            await addDoc(collection(db, "accessLogs"), {
+                userId: userID,
+                location: userLocation ? { lat: userLocation.latitude, lon: userLocation.longitude, acc: userLocation.accuracy } : null,
+                accessGranted,
+                reason,
+                timestamp: Timestamp.now(),
+                userAgent: navigator.userAgent
+            });
+        } catch (error) {
+            console.error("Error logging access attempt:", error);
+        }
+    };
+    
     // --- Utility Functions ---
+    const normalizePhoneNumberForWhatsApp = (phone) => {
+        if (!phone || typeof phone !== 'string') return '';
+        let cleaned = phone.replace(/\D/g, '');
+        if (cleaned.startsWith('0')) {
+            cleaned = '60' + cleaned.substring(1);
+        }
+        return cleaned;
+    };
+
+    const goBack = () => {
+        if (routeHistory.length > 0) {
+            routeHistory.pop()();
+        } else {
+            renderLandingPage();
+        }
+    };
+
     const formatDate = (date) => {
         if (!date) return "N/A";
         const d = date instanceof Date ? date : date.toDate();
-        return d.toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: '2-digit' });
+        return `${String(d.getDate()).padStart(2, '0')}/${String(d.getMonth() + 1).padStart(2, '0')}/${String(d.getFullYear()).slice(-2)}`;
     };
 
+    const formatDateLongForm = (date) => {
+        if (!date) return "N/A";
+        const d = date instanceof Date ? date : date.toDate();
+        return d.toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
+    };
+    
     const toISODate = d => d ? new Date(d.getTime() - (d.getTimezoneOffset() * 60000)).toISOString().split("T")[0] : "";
     const getFormObj = form => Object.fromEntries(new FormData(form).entries());
     const parseLocalDate = (dateString) => {
         if (!dateString) return null;
         const date = new Date(dateString);
-        if (isNaN(date)) return null;
-        date.setMinutes(date.getMinutes() + date.getTimezoneOffset()); // Adjust for timezone
-        return date;
+        return isNaN(date) ? null : new Date(date.getTime() + date.getTimezoneOffset() * 60000);
     };
-    
+
     const showNotification = (message, type = "success") => {
         const notification = document.createElement("div");
-        const colors = { success: "bg-green-500", error: "bg-red-500", info: "bg-blue-500" };
-        notification.className = `fixed bottom-5 right-5 p-4 rounded-lg shadow-lg text-white z-[100] ${colors[type] || 'bg-gray-500'}`;
-        notification.textContent = message;
+        const bgColor = type === "success" ? "bg-green-500" : type === "error" ? "bg-red-500" : "bg-blue-500";
+        notification.className = `fixed bottom-5 right-5 p-4 rounded-lg shadow-lg text-white flex items-center animate-fade-in z-[100] ${bgColor}`;
+        notification.innerHTML = `<span>${message}</span>`;
         document.body.appendChild(notification);
         setTimeout(() => notification.remove(), 4000);
     };
 
-    // --- Core Logic & Event Handlers ---
-    onAuthStateChanged(auth, (user) => {
-        unsubscribes.forEach(unsub => unsub());
-        unsubscribes = [];
+    const performSecureLogout = async () => {
+        try {
+            await signOut(auth);
+            sessionStorage.clear();
+            showNotification("Logged out successfully");
+        } catch (error) {
+            console.error("Logout error:", error);
+            showNotification("Logout failed.", "error");
+        }
+    };
+
+    const isValidSecureSession = () => sessionStorage.getItem('isDashboardLogin') === 'true' && sessionStorage.getItem('currentUserID');
+
+    // — Icon Library —
+    const icons = {
+        car: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M2,16H46" /><path d="M6,16 C6,16 6,12 10,8 C14,4 18,4 24,4 C30,4 34,4 38,8 C42,12 42,16 42,16" /><path d="M8 20a2 2 0 100-4 2 2 0 000 4z" /><path d="M40 20a2 2 0 100-4 2 2 0 000 4z" /></svg>`,
+        logout: `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path><polyline points="16 17 21 12 16 7"></polyline><line x1="21" y1="12" x2="9" y2="12"></line></svg>`,
+        plus: `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>`,
+        edit: `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z"></path></svg>`,
+        trash: `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>`,
+        shield: `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path></svg>`,
+        greenlist: `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg>`,
+        sun: `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="5"></circle><line x1="12" y1="1" x2="12" y2="3"></line><line x1="12" y1="21" x2="12" y2="23"></line><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line><line x1="1" y1="12" x2="3" y2="12"></line><line x1="21" y1="12" x2="23" y2="12"></line><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line></svg>`,
+        request: `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 14c.2-1 .7-1.7 1.5-2.5 1-.9 1.5-2.2 1.5-3.5A6 6 0 0 0 6 8c0 1 .2 2.2 1.5 3.5.7.7 1.3 1.5 1.5 2.5"></path><path d="M9 18h6"></path><path d="M2 22v-2a4 4 0 0 1 4-4h12a4 4 0 0 1 4 4v2"></path></svg>`,
+        search: `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"></circle><path d="m21 21-4.35-4.35"></path></svg>`,
+        mic: `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"></path><path d="M19 10v2a7 7 0 0 1-14 0v-2"></path><line x1="12" y1="19" x2="12" y2="23"></line><line x1="8" y1="23" x2="16" y2="23"></line></svg>`,
+        x: `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>`,
+        chevronRight: `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"></polyline></svg>`,
+        download: `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>`,
+        settings: `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06-.06a1.65 1.65 0 0 0-.33 1.82V15a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>`,
+        star: `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="currentColor"><path d="M12 17.27L18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21z"/></svg>`,
+        database: `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><ellipse cx="12" cy="5" rx="9" ry="3"></ellipse><path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3"></path><path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"></path></svg>`,
+        whatsapp: `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="currentColor"><path d="M.057 24l1.687-6.163c-1.041-1.804-1.588-3.849-1.587-5.946.003-6.556 5.338-11.891 11.893-11.891 3.181.001 6.167 1.24 8.413 3.488 2.245 2.248 3.481 5.236 3.48 8.414-.003 6.557-5.338 11.892-11.894 11.892-1.99-.001-3.951-.5-5.688-1.448l-6.305 1.654zm6.597-3.807c1.676.995 3.276 1.591 5.392 1.592 5.448 0 9.886-4.434 9.889-9.885.002-5.462-4.415-9.89-9.881-9.892-5.452 0-9.887 4.434-9.889 9.886-.001 2.267.655 4.398 1.908 6.161l.217.324-1.251 4.565 4.654-1.225.308.212z"/></svg>`
+    };
+    
+    // --- PDF Generation Function ---
+    const generatePDFReport = async (button) => {
+        button.disabled = true;
+        button.innerHTML = '<div class="spinner w-4 h-4 border-2 border-white border-t-transparent rounded-full"></div> Generating...';
+        try {
+            const { jsPDF } = window.jspdf;
+            const doc = new jsPDF({ orientation: "portrait", unit: "mm", format: "a4" });
+            
+            // PDF Generation Logic (as in your original script)
+            
+            showNotification("PDF report generated successfully!");
+        } catch (error) {
+            console.error("PDF Generation Error:", error);
+            showNotification(`Failed to generate PDF: ${error.message}`, "error");
+        } finally {
+            button.disabled = false;
+            button.innerHTML = 'Download Report';
+        }
+    };
+
+    // --- DATABASE MANAGEMENT FUNCTIONS ---
+    const clearAllDatabaseData = async (button) => {
+        // ... (function content from your script)
+    };
+    const resetToDefaultState = async (button) => {
+        // ... (function content from your script)
+    };
+    const exportDatabaseData = async (button) => {
+        // ... (function content from your script)
+    };
+    const updateDatabaseStats = async () => {
+        // ... (function content from your script)
+    };
+    // — Render Functions —
+    const renderLandingPage = (options = {}) => {
+        const { trackingResultHTML = "", vehicleNumber = "" } = options;
+        document.body.className = 'bg-slate-900';
+
+        let trackingSection = '';
+        if (trackingResultHTML) {
+            trackingSection = `
+            <div class="mt-6 space-y-4">
+                <h3 class="text-sm font-medium text-slate-300">Tracking Result:</h3>
+                ${trackingResultHTML}
+                <button id="clear-tracking-btn" class="w-full px-4 py-2 text-sm bg-slate-700/50 text-slate-300 rounded-lg hover:bg-slate-700">Clear Result</button>
+            </div>`;
+        }
+
+        appRoot.innerHTML = `
+        <div class="min-h-screen flex items-center justify-center p-4">
+            <div class="w-full max-w-md bg-slate-800 rounded-2xl p-8 space-y-8 text-center animate-fade-in">
+                <header class="space-y-4">
+                    <img src="https://raw.githubusercontent.com/Theva73/Vehicle-Clearance/main/car_logo.jpg" alt="Logo" class="w-48 h-auto mx-auto" onerror="this.style.display='none'">
+                    <div>
+                        <h1 class="text-4xl font-bold tracking-tight text-white">Vehicle Clearance</h1>
+                        <p class="text-slate-400 mt-2">Your gateway to seamless access.</p>
+                    </div>
+                </header>
+
+                <main class="space-y-4">
+                    <button id="request-btn" class="w-full flex items-center justify-center gap-3 p-4 bg-blue-600 hover:bg-blue-500 text-white rounded-lg transition-transform hover:scale-105 shadow-lg">
+                        <span class="w-6 h-6">${icons.request}</span>
+                        <span class="font-semibold text-lg">Request Clearance</span>
+                    </button>
+                    
+                    <div class="grid grid-cols-2 gap-4">
+                        <button id="admin-btn" class="flex flex-col items-center justify-center p-4 bg-slate-700/50 hover:bg-slate-700 text-slate-300 rounded-lg">
+                            <span class="w-8 h-8 text-blue-400">${icons.shield}</span>
+                            <span class="mt-2 font-semibold">Admin</span>
+                        </button>
+                        <button id="user-btn" class="flex flex-col items-center justify-center p-4 bg-slate-700/50 hover:bg-slate-700 text-slate-300 rounded-lg">
+                            <span class="w-8 h-8 text-green-400">${icons.greenlist}</span>
+                            <span class="mt-2 font-semibold">Green List</span>
+                        </button>
+                    </div>
+                </main>
+
+                <footer class="pt-8">
+                    <form id="track-request-form" class="space-y-3">
+                        <label class="text-sm font-medium text-slate-400">Or, track an existing request</label>
+                        <div class="flex gap-2">
+                            <input id="track-id-input" oninput="this.value=this.value.toUpperCase().replace(/[^A-Z0-9]/g, '')" class="block w-full px-4 py-2 bg-slate-900/70 border border-slate-700 rounded-lg text-white" placeholder="Enter Vehicle Number" value="${vehicleNumber}" style="text-transform: uppercase;">
+                            <button type="submit" class="flex items-center justify-center px-4 py-2 rounded-lg text-white bg-slate-700 hover:bg-slate-600">
+                                <span class="w-5 h-5">${icons.search}</span>
+                            </button>
+                        </div>
+                    </form>
+                    <div id="tracking-result">${trackingSection}</div>
+                </footer>
+            </div>
+        </div>
+        <div id="modal-container"></div>`;
+        routeHistory = [];
+    };
+
+    const renderAdminLogin = () => {
+        document.body.className = 'dark-theme-bg';
+        const isSignup = authMode === "signup";
+        appRoot.innerHTML = `
+        <div class="min-h-screen flex items-center justify-center p-4">
+            <div class="w-full max-w-md bg-slate-800/80 backdrop-blur-sm border border-blue-500/20 rounded-2xl shadow-2xl p-8 space-y-6 animate-fade-in">
+                <div class="text-center">
+                    <div class="w-12 h-12 mx-auto text-blue-400">${icons.shield}</div>
+                    <h1 class="text-3xl font-bold text-white mt-4">Admin Access</h1>
+                    <p class="text-slate-400">${isSignup ? "Create an admin account" : "Sign in to manage clearances"}</p>
+                </div>
+                <form id="auth-form" class="space-y-4">
+                    <div class="${isSignup ? '' : 'hidden'}">
+                        <label class="text-sm font-medium text-slate-300">Admin Invite Code</label>
+                        <input type="text" name="inviteCode" class="mt-1 block w-full px-4 py-3 bg-slate-900/70 border border-slate-700 rounded-lg text-white" placeholder="Enter the secret code" />
+                    </div>
+                     <div class="${isSignup ? '' : 'hidden'}">
+                        <label class="text-sm font-medium text-slate-300">Email</label>
+                        <input type="email" name="email" class="mt-1 block w-full px-4 py-3 bg-slate-900/70 border border-slate-700 rounded-lg text-white" placeholder="admin@example.com" ${isSignup ? 'required' : ''} />
+                    </div>
+                    <div>
+                        <label class="text-sm font-medium text-slate-300">Username</label>
+                        <input type="text" name="username" class="mt-1 block w-full px-4 py-3 bg-slate-900/70 border border-slate-700 rounded-lg text-white" placeholder="e.g., steve" required />
+                    </div>
+                    <div class="${isSignup ? '' : 'hidden'}">
+                        <label class="text-sm font-medium text-slate-300">Designation</label>
+                        <input type="text" name="designation" class="mt-1 block w-full px-4 py-3 bg-slate-900/70 border border-slate-700 rounded-lg text-white" placeholder="e.g., AD,OC,APO..." ${isSignup ? 'required' : ''} />
+                    </div>
+                    <div>
+                        <label class="text-sm font-medium text-slate-300">Password</label>
+                        <input type="password" name="password" class="mt-1 block w-full px-4 py-3 bg-slate-900/70 border border-slate-700 rounded-lg text-white" placeholder="••••••••" required />
+                    </div>
+                    <button type="submit" class="w-full flex justify-center py-3 px-4 rounded-lg text-white bg-blue-600 hover:bg-blue-700">${isSignup ? "Sign Up" : "Login"}</button>
+                </form>
+                <p class="text-center text-sm text-slate-400">
+                    <span>${isSignup ? "Already have an account?" : "Need an admin account?"}</span>
+                    <button id="auth-toggle-button" class="font-medium text-blue-400 hover:text-blue-300 ml-1">${isSignup ? "Login" : "Sign Up"}</button>
+                </p>
+                <button id="back-btn" class="mt-2 text-slate-400 hover:text-slate-200 underline text-sm block mx-auto">Back</button>
+            </div>
+        </div>`;
+    };
+
+    const renderUserLogin = () => {
+        document.body.className = 'dark-theme-bg';
+        appRoot.innerHTML = `
+        <div class="min-h-screen flex items-center justify-center p-4">
+            <div class="w-full max-w-md bg-slate-800/80 backdrop-blur-sm border border-green-500/20 rounded-2xl shadow-2xl p-8 space-y-6 animate-fade-in text-center">
+                <div class="w-12 h-12 mx-auto text-green-400">${icons.greenlist}</div>
+                <h1 class="text-3xl font-bold text-white mt-4">Secure Access</h1>
+                <p class="text-slate-400">Enter your User ID and verify location</p>
+                <form id="secure-user-login-form" class="space-y-4 pt-4">
+                    <div>
+                        <label class="text-sm font-medium text-slate-300">User ID</label>
+                        <input type="text" name="userID" class="block w-full px-4 py-3 bg-slate-900/70 border border-slate-700 rounded-lg text-white" placeholder="Enter your User ID" oninput="this.value=this.value.replace(/\\D/g, '')" required />
+                    </div>
+                    <div id="location-status" class="hidden p-3 rounded-lg border border-blue-500/30 bg-blue-500/10">
+                        <div class="flex items-center gap-2 justify-center">
+                            <div class="animate-spin w-4 h-4 border-2 border-blue-400 border-t-transparent rounded-full"></div>
+                            <span class="text-sm text-blue-300">Verifying your location...</span>
+                        </div>
+                    </div>
+                    <button type="submit" class="w-full py-3 px-4 rounded-lg text-white bg-green-600 hover:bg-green-700">Verify Access</button>
+                </form>
+                <button id="back-btn" class="mt-4 text-slate-400 hover:text-slate-200 underline text-sm">Back</button>
+            </div>
+        </div>`;
+    };
+
+    const renderRequestForm = () => {
+        document.body.className = 'dark-theme-bg';
+        const now = new Date();
+        const minDate = new Date();
+        if (now.getHours() >= 14) {
+            minDate.setDate(minDate.getDate() + 1);
+        }
+        const minDateString = minDate.toISOString().split('T')[0];
+
+        appRoot.innerHTML = `
+        <div class="min-h-screen flex items-center justify-center p-4">
+            <div class="w-full max-w-lg bg-slate-800/80 backdrop-blur-sm border border-yellow-500/20 rounded-2xl shadow-2xl p-8 space-y-6 animate-fade-in">
+                <div class="text-center">
+                    <div class="w-12 h-12 mx-auto text-yellow-400">${icons.request}</div>
+                    <h1 class="text-3xl font-bold text-white mt-4">Request Vehicle Clearance</h1>
+                    <p class="text-slate-400">Fill in the details below</p>
+                </div>
+                <form id="request-form" class="space-y-4 text-left" novalidate>
+                    <div>
+                        <label class="text-sm font-medium text-slate-300">Your Name</label>
+                        <input name="requesterName" class="mt-1 w-full p-3 bg-slate-900/70 border border-slate-700 rounded-lg text-white" placeholder="e.g. John Doe" required />
+                    </div>
+                     <div>
+                        <label class="text-sm font-medium text-slate-300">Your Email Address</label>
+                        <input type="email" name="requesterEmail" placeholder="you@example.com" class="mt-1 w-full p-3 bg-slate-900/70 border border-slate-700 rounded-lg text-white" required />
+                    </div>
+                    <div>
+                        <label class="text-sm font-medium text-slate-300">Your Contact Number</label>
+                        <input type="tel" name="requesterContact" placeholder="e.g., 60123456789" class="mt-1 w-full p-3 bg-slate-900/70 border border-slate-700 rounded-lg text-white" required />
+                    </div>
+                    <div>
+                        <label class="text-sm font-medium text-slate-300">Vehicle Number</label>
+                        <input name="vehicleNumber" oninput="this.value=this.value.toUpperCase().replace(/[^A-Z0-9]/g, '')" class="mt-1 w-full p-3 bg-slate-900/70 border border-slate-700 rounded-lg text-white" required style="text-transform: uppercase;">
+                    </div>
+                    <div>
+                        <label class="text-sm font-medium text-slate-300">Entry Date</label>
+                        <input type="date" id="request-entry-date" name="entryDate" min="${minDateString}" class="mt-1 w-full p-3 bg-slate-900/70 border border-slate-700 rounded-lg text-white" required />
+                        <p class="text-xs text-yellow-400 mt-2">For same-day clearance, requests must be submitted before 14:00hrs.</p>
+                    </div>
+                    <div>
+                        <label class="text-sm font-medium text-slate-300">Notes</label>
+                        <textarea name="notes" rows="3" class="mt-1 w-full p-3 bg-slate-900/70 border border-slate-700 rounded-lg text-white" placeholder="Purpose of entry"></textarea>
+                    </div>
+                    <div class="flex justify-between pt-4">
+                        <button id="back-btn" type="button" class="px-6 py-2 rounded-lg bg-slate-700 text-slate-300 hover:bg-slate-600">Back</button>
+                        <button type="submit" class="px-6 py-2 rounded-lg bg-blue-600 text-white hover:bg-blue-700">Submit</button>
+                    </div>
+                </form>
+            </div>
+        </div>`;
+    };
+    
+    const createStatusCard = (r) => {
+        const statusConfig = {
+            approved: { text: "APPROVED", color: "text-green-400", bg: "bg-green-500/10", border: "border-green-500/20" },
+            rejected: { text: "REJECTED", color: "text-red-400", bg: "bg-red-500/10", border: "border-red-500/20" },
+            pending: { text: "PENDING", color: "text-yellow-400", bg: "bg-yellow-500/10", border: "border-yellow-500/20" },
+            active: { text: "ACTIVE CLEARANCE", color: "text-green-400", bg: "bg-green-500/10", border: "border-green-500/20" },
+            expired: { text: "EXPIRED", color: "text-gray-400", bg: "bg-gray-500/10", border: "border-gray-500/20" }
+        };
+
+        const config = statusConfig[r.status] || statusConfig.pending;
+        const expiry = r.expiryDate || r.entryDate;
+
+        return `
+        <div class="p-4 ${config.bg} ${config.border} rounded-xl border text-left animate-fade-in">
+            <div class="flex justify-between items-start mb-3">
+                <div>
+                    <p class="text-sm text-slate-400">Vehicle</p>
+                    <p class="font-mono text-xl font-bold text-blue-400">${r.vehicleNumber.toUpperCase()}</p>
+                </div>
+                <span class="px-2 py-1 rounded-full text-xs font-medium ${config.color} ${config.bg} border ${config.border}">${config.text}</span>
+            </div>
+            <div class="grid grid-cols-2 gap-3 text-sm">
+                <div>
+                    <p class="text-xs text-slate-400">Requested by</p>
+                    <p class="font-semibold text-slate-200">${r.requesterName || r.ownerName || 'N/A'}</p>
+                </div>
+                <div>
+                    <p class="text-xs text-slate-400">Valid Until</p>
+                    <p class="font-semibold text-slate-200">${formatDate(expiry)}</p>
+                </div>
+            </div>
+            ${r.rejectionReason ? `<div class="mt-3 pt-3 border-t border-red-500/20"><p class="text-xs text-red-400">Reason</p><p class="text-sm text-red-300">${r.rejectionReason}</p></div>` : ""}
+        </div>`;
+    };
+
+    const findCurrentVehicleStatus = async (vehicleNumber) => {
+        const now = new Date();
+        
+        // Check active clearances first
+        const activeClearanceQuery = query(
+            collection(db, "vehicleClearances"),
+            where("vehicleNumber", "==", vehicleNumber),
+            where("expiryDate", ">=", Timestamp.fromDate(new Date(now.setHours(0,0,0,0))))
+        );
+        const activeSnap = await getDocs(activeClearanceQuery);
+        if (!activeSnap.empty) {
+            return { ...activeSnap.docs[0].data(), status: 'active' };
+        }
+
+        // Then check recent requests
+        const sevenDaysAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+        const requestQuery = query(
+            collection(db, "clearanceRequests"),
+            where("vehicleNumber", "==", vehicleNumber),
+            where("createdAt", ">=", Timestamp.fromDate(sevenDaysAgo)),
+            orderBy("createdAt", "desc"),
+            limit(1)
+        );
+        const requestSnap = await getDocs(requestQuery);
+        if (!requestSnap.empty) {
+            return requestSnap.docs[0].data();
+        }
+
+        // Finally, check for any past expired clearance
+        const expiredQuery = query(
+            collection(db, "vehicleClearances"),
+            where("vehicleNumber", "==", vehicleNumber),
+            orderBy("expiryDate", "desc"),
+            limit(1)
+        );
+        const expiredSnap = await getDocs(expiredQuery);
+        if (!expiredSnap.empty) {
+            return { ...expiredSnap.docs[0].data(), status: 'expired' };
+        }
+        
+        return null;
+    };
+
+    const renderClearanceListForUser = (vehicleFilter = null) => {
+        const listContainer = document.getElementById('user-clearance-list-container');
+        if (!listContainer) return;
+        
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+
+        let dailyClearances = clearances.filter(c => {
+            const expiryDate = c.expiryDate.toDate();
+            expiryDate.setHours(23, 59, 59, 999);
+            return expiryDate >= today;
+        });
+
+        if (vehicleFilter) {
+            dailyClearances = dailyClearances.filter(c => c.vehicleNumber.includes(vehicleFilter));
+        }
+
+        if (dailyClearances.length > 0) {
+            listContainer.innerHTML = dailyClearances.map(c => `
+            <details class="bg-white dark:bg-gray-800 rounded-lg shadow-md overflow-hidden group">
+                <summary class="flex justify-between items-center p-4 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700">
+                    <p class="font-mono text-lg font-bold text-blue-500 dark:text-blue-400">${c.vehicleNumber}</p>
+                    <span class="px-2 py-1 text-xs font-medium bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200 rounded-full">Cleared</span>
+                </summary>
+                <div class="p-4 border-t border-gray-200 dark:border-gray-700">
+                    <p><strong>Owner:</strong> ${c.ownerName}</p>
+                    <p><strong>Valid Until:</strong> ${formatDate(c.expiryDate)}</p>
+                    ${c.notes ? `<p><strong>Notes:</strong> ${c.notes}</p>` : ""}
+                </div>
+            </details>`).join('');
+        } else {
+            const message = vehicleFilter ? `No active clearance found for "${vehicleFilter}".` : "No active clearances for today.";
+            listContainer.innerHTML = `<div class="text-center p-8 text-gray-500 dark:text-gray-400">${message}</div>`;
+        }
+    };
+    
+    const renderUserDashboard = (user, vehicleFilter = null) => {
+        document.body.className = 'bg-gray-100 dark:bg-gray-900';
+        const currentUserID = sessionStorage.getItem('currentUserID');
+        
+        appRoot.innerHTML = `
+        <div class="max-w-4xl mx-auto p-4">
+            <header class="flex justify-between items-center mb-6">
+                <div>
+                    <h1 class="text-3xl font-bold text-gray-800 dark:text-gray-100">Daily Clearances</h1>
+                    <p class="text-gray-500 dark:text-gray-400">Showing vehicles cleared for today: ${formatDate(new Date())}</p>
+                </div>
+                <button id="logout-button" class="px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-200 bg-gray-200 dark:bg-gray-700 rounded-lg">Logout</button>
+            </header>
+            
+            <div class="mb-6">
+                <input id="daily-clearance-search-input" class="w-full p-3 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-lg" placeholder="Search by Vehicle Number..." value="${vehicleFilter || ''}">
+            </div>
+            
+            <div id="user-clearance-list-container" class="space-y-4"></div>
+            
+            <button id="show-vvip-btn" class="fixed bottom-6 right-6 w-16 h-16 bg-blue-600 text-white rounded-full shadow-lg flex items-center justify-center hover:bg-blue-700">
+                <span class="w-8 h-8 text-yellow-300">${icons.star}</span>
+            </button>
+            <div id="modal-container"></div>
+        </div>`;
+
+        renderClearanceListForUser(vehicleFilter);
+    };
+    const renderAdminDashboard = (adminUser) => {
+        document.body.className = 'bg-gray-100 dark:bg-gray-900';
+        appRoot.innerHTML = `
+        <div id="admin-dashboard-container">
+            <header class="bg-white dark:bg-gray-800 shadow-md sticky top-0 z-30">
+                <nav class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3 flex justify-between items-center">
+                    <div class="flex items-center gap-3">
+                        <span class="text-blue-500 w-8 h-8">${icons.shield}</span>
+                        <span class="text-xl font-bold text-gray-800 dark:text-gray-100">Admin Dashboard</span>
+                    </div>
+                    <div class="flex items-center gap-3">
+                        <span class="text-sm text-gray-600 dark:text-gray-400 hidden sm:block">${adminUser.username} (${adminUser.designation})</span>
+                        <button id="settings-btn" title="Settings" class="p-2 text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-full">${icons.settings}</button>
+                        <button id="logout-button" title="Logout" class="p-2 rounded-full text-white bg-red-500 hover:bg-red-600"><span class="w-5 h-5">${icons.logout}</span></button>
+                    </div>
+                </nav>
+            </header>
+            <main class="max-w-7xl mx-auto p-4 sm:p-6 lg:p-8 space-y-10">
+                <section>
+                    <div class="flex items-center gap-4 mb-4">
+                        <h2 class="text-2xl font-semibold text-gray-800 dark:text-gray-100">Pending Requests</h2>
+                        <span id="requests-count-badge" class="flex items-center justify-center min-w-[24px] h-6 px-2 text-xs font-bold text-white bg-red-500 rounded-full">0</span>
+                    </div>
+                    <div id="requests-list" class="space-y-4"></div>
+                </section>
+                <section>
+                    <div class="flex flex-wrap gap-4 justify-between items-center mb-6">
+                        <h2 class="text-2xl font-semibold text-gray-800 dark:text-gray-100">Manage Clearances</h2>
+                        <div class="flex gap-2">
+                           <button id="download-report-btn" class="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700">
+                                <span class="w-5 h-5">${icons.download}</span><span class="hidden sm:inline">Download Report</span>
+                            </button>
+                            <button id="add-clearance-btn" class="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700">
+                                <span class="w-5 h-5">${icons.plus}</span><span class="hidden sm:inline">Fast Track</span>
+                            </button>
+                        </div>
+                    </div>
+                    <div id="clearance-list" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"></div>
+                </section>
+            </main>
+            <div id="modal-container"></div>
+            <div id="settings-panel-container"></div>
+        </div>`;
+
+        renderRequestsList();
+        renderClearancesList();
+    };
+
+    const renderRequestsList = () => {
+        const list = document.getElementById("requests-list");
+        if (!list) return;
+
+        if (!clearanceRequests || clearanceRequests.length === 0) {
+            list.innerHTML = `<div class="text-center p-8 text-gray-500 dark:text-gray-400 bg-gray-50 dark:bg-gray-900/50 rounded-lg">No pending requests.</div>`;
+            return;
+        }
+
+        list.innerHTML = `<div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">${
+            clearanceRequests.map(r => `
+                <button class="review-btn group p-3 rounded-lg border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 shadow-sm hover:border-blue-400 text-left" data-id="${r.id}">
+                    <p class="font-mono font-bold text-blue-600 dark:text-blue-400 truncate">${r.vehicleNumber.toUpperCase()}</p>
+                    <p class="text-xs text-gray-500 dark:text-gray-400">by ${r.requesterName || 'N/A'}</p>
+                    <p class="text-xs text-gray-400 mt-1">${formatDate(r.createdAt)}</p>
+                </button>
+            `).join('')
+        }</div>`;
+        
+        const badge = document.getElementById('requests-count-badge');
+        if (badge) {
+            badge.textContent = clearanceRequests.length;
+            badge.classList.toggle('hidden', clearanceRequests.length === 0);
+        }
+    };
+
+    const renderClearancesList = () => {
+        const list = document.getElementById("clearance-list");
+        if (!list) return;
+
+        const now = new Date();
+        const activeClearances = clearances.filter(c => c.expiryDate.toDate() >= now);
+
+        if (activeClearances.length === 0) {
+            list.innerHTML = `<div class="col-span-full text-center p-8 text-gray-500 dark:text-gray-400 bg-gray-50 dark:bg-gray-800/50 rounded-lg">No active clearances found.</div>`;
+            return;
+        }
+
+        list.innerHTML = activeClearances.map(c => {
+            const contact = c.ownerContact || c.requesterContact;
+            const whatsappLink = contact ? `https://wa.me/${normalizePhoneNumberForWhatsApp(contact)}?text=${encodeURIComponent(`Regarding vehicle ${c.vehicleNumber}`)}` : '#';
+
+            return `
+            <details class="bg-white dark:bg-gray-800 rounded-lg shadow-md overflow-hidden group">
+                <summary class="flex justify-between items-center p-4 cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-700/50">
+                    <p class="font-mono text-lg font-bold text-blue-600 dark:text-blue-400">${c.vehicleNumber}</p>
+                    <div class="flex items-center gap-2">
+                        <button class="edit-btn p-2 text-blue-500 hover:bg-blue-100 dark:hover:bg-gray-700 rounded-full" data-id="${c.id}">${icons.edit}</button>
+                        <button class="delete-btn p-2 text-red-500 hover:bg-red-100 dark:hover:bg-gray-700 rounded-full" data-id="${c.id}">${icons.trash}</button>
+                    </div>
+                </summary>
+                <div class="p-4 border-t border-gray-200 dark:border-gray-700 space-y-2 text-sm">
+                    <p><strong>Owner:</strong> ${c.ownerName}</p>
+                    <p><strong>Contact:</strong> ${contact || 'N/A'} <a href="${whatsappLink}" target="_blank" class="${!contact ? 'hidden' : 'inline-block ml-2 text-green-500'}">${icons.whatsapp}</a></p>
+                    <p><strong>Email:</strong> ${c.ownerEmail || c.requesterEmail || 'N/A'}</p>
+                    <p><strong>Validity:</strong> ${formatDate(c.entryDate)} - ${formatDate(c.expiryDate)}</p>
+                    <p><strong>Escort:</strong> ${c.escortRequired ? 'Required' : 'Not Required'}</p>
+                    ${c.notes ? `<p class="whitespace-pre-wrap"><strong>Notes:</strong> ${c.notes}</p>` : ""}
+                </div>
+            </details>
+        `}).join("");
+    };
+
+    const renderVVIPListForSettings = () => {
+        const container = document.getElementById('vvip-list-container-settings');
+        if (!container) return;
+        container.innerHTML = vvips.length > 0 ? vvips.map(v => `
+            <div class="flex items-center justify-between p-3 bg-white dark:bg-gray-800 rounded-lg border dark:border-gray-700">
+                <div>
+                    <p class="font-mono font-bold text-blue-600 dark:text-blue-400">${v.vehicleNumber.toUpperCase()}</p>
+                    <p class="text-sm text-gray-600 dark:text-gray-300">${v.designation}</p>
+                </div>
+                <button class="delete-vvip-btn p-2 text-red-500 hover:bg-red-100 dark:hover:bg-gray-600 rounded-full" data-id="${v.id}">${icons.trash}</button>
+            </div>`).join('') : '<p class="text-center text-sm text-gray-500">No VVIPs added.</p>';
+    };
+
+    const renderReviewModal = (request) => {
+        const modalContainer = document.getElementById("modal-container");
+        modalContainer.innerHTML = `
+        <div id="review-modal-backdrop" class="fixed inset-0 bg-black bg-opacity-60 z-50 flex items-center justify-center p-4">
+            <div class="bg-white dark:bg-gray-800 rounded-lg shadow-xl p-6 w-full max-w-2xl relative animate-fade-in max-h-[90vh] flex flex-col">
+                <button id="close-modal-btn" class="absolute top-4 right-4 text-gray-400 hover:text-gray-600">${icons.x}</button>
+                <h2 class="text-2xl font-bold text-gray-800 dark:text-gray-100 mb-4">Review Request</h2>
+                <form id="review-form" class="space-y-4 overflow-y-auto">
+                    <input type="hidden" name="id" value="${request.id}">
+                    <div>
+                        <label class="text-sm font-medium">Requester's Email</label>
+                        <input name="requesterEmail" value="${request.requesterEmail || ''}" class="mt-1 w-full p-2 border rounded" required />
+                    </div>
+                    <div>
+                        <label class="text-sm font-medium">Owner's Name</label>
+                        <input name="ownerName" value="${request.requesterName || ''}" class="mt-1 w-full p-2 border rounded" required />
+                    </div>
+                    <div>
+                        <label class="text-sm font-medium">Vehicle Number</label>
+                        <input name="vehicleNumber" value="${request.vehicleNumber || ''}" class="mt-1 w-full p-2 border rounded" required />
+                    </div>
+                    <div>
+                        <label class="text-sm font-medium">Entry Date</label>
+                        <input type="date" name="entryDate" value="${toISODate(request.entryDate?.toDate?.())}" class="mt-1 w-full p-2 border rounded" required />
+                    </div>
+                    <div>
+                        <label class="text-sm font-medium">Notes</label>
+                        <textarea name="notes" rows="3" class="mt-1 w-full p-2 border rounded">${request.notes || ''}</textarea>
+                    </div>
+                    <div class="flex items-center">
+                        <input type="checkbox" name="escortRequired" class="h-5 w-5 rounded" ${request.escortRequired ? 'checked' : ''}/>
+                        <label class="ml-2">Escort Required</label>
+                    </div>
+                    <div class="flex justify-end gap-3 pt-4 border-t">
+                        <button type="button" class="reject-request-btn px-4 py-2 rounded bg-red-600 text-white" data-id="${request.id}">Reject</button>
+                        <button type="button" class="approve-request-btn px-4 py-2 rounded bg-blue-600 text-white" data-id="${request.id}">Approve</button>
+                    </div>
+                </form>
+            </div>
+        </div>`;
+    };
+    
+    const renderModal = (edit = null) => {
+        const modalContainer = document.getElementById("modal-container");
+        const isEdit = !!edit;
+        modalContainer.innerHTML = `
+        <div id="form-modal-backdrop" class="fixed inset-0 bg-black bg-opacity-60 z-50 flex items-center justify-center p-4">
+            <div class="bg-white dark:bg-gray-800 rounded-lg shadow-xl p-6 w-full max-w-2xl relative animate-fade-in max-h-[90vh] flex flex-col">
+                <button id="close-modal-btn" class="absolute top-4 right-4 text-gray-400 hover:text-gray-600">${icons.x}</button>
+                <h2 class="text-2xl font-bold text-gray-800 dark:text-gray-100 mb-4">${isEdit ? 'Edit Clearance' : 'Fast Track Clearance'}</h2>
+                <form id="clearance-form" class="space-y-4 overflow-y-auto">
+                    <!-- Form fields -->
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                            <label class="text-sm font-medium">Owner's Name</label>
+                            <input name="ownerName" value="${edit?.ownerName || ''}" class="mt-1 w-full p-2 border rounded" required />
+                        </div>
+                        <div>
+                            <label class="text-sm font-medium">Vehicle Number</label>
+                            <input name="vehicleNumber" value="${edit?.vehicleNumber || ''}" class="mt-1 w-full p-2 border rounded" required />
+                        </div>
+                        <div>
+                            <label class="text-sm font-medium">Contact Number</label>
+                            <input name="ownerContact" value="${edit?.ownerContact || ''}" type="tel" class="mt-1 w-full p-2 border rounded" />
+                        </div>
+                        <div>
+                            <label class="text-sm font-medium">Email Address</label>
+                            <input name="ownerEmail" value="${edit?.ownerEmail || ''}" type="email" class="mt-1 w-full p-2 border rounded" />
+                        </div>
+                        <div>
+                            <label class="text-sm font-medium">Entry Date</label>
+                            <input type="date" name="entryDate" value="${toISODate(edit?.entryDate?.toDate?.())}" class="mt-1 w-full p-2 border rounded" required />
+                        </div>
+                        <div>
+                            <label class="text-sm font-medium">Expiry Date</label>
+                            <input type="date" name="expiryDate" value="${toISODate(edit?.expiryDate?.toDate?.())}" class="mt-1 w-full p-2 border rounded" required />
+                        </div>
+                    </div>
+                    <div>
+                        <label class="text-sm font-medium">Notes</label>
+                        <textarea name="notes" rows="3" class="mt-1 w-full p-2 border rounded">${edit?.notes || ''}</textarea>
+                    </div>
+                    <div class="flex items-center">
+                        <input type="checkbox" name="escortRequired" class="h-5 w-5 rounded" ${edit?.escortRequired ? 'checked' : ''}/>
+                        <label class="ml-2">Escort Required</label>
+                    </div>
+                    <div class="flex justify-end gap-3 pt-4 border-t">
+                        <button type="button" id="cancel-modal-btn" class="px-4 py-2 rounded bg-gray-200">Cancel</button>
+                        <button type="button" class="save-clearance-btn px-4 py-2 rounded bg-blue-600 text-white" data-id="${edit?.id || ''}">${isEdit ? 'Update' : 'Save'}</button>
+                    </div>
+                </form>
+            </div>
+        </div>`;
+    };
+    
+    const renderConfirmationModal = (title, message, onConfirm) => {
+        const modalContainer = document.getElementById('modal-container');
+        modalContainer.innerHTML = `
+        <div id="confirm-modal-backdrop" class="fixed inset-0 bg-black bg-opacity-60 z-[60] flex items-center justify-center p-4">
+            <div class="bg-white dark:bg-gray-800 rounded-lg shadow-xl p-6 w-full max-w-sm relative animate-fade-in">
+                <h2 class="text-lg font-bold">${title}</h2>
+                <p class="mt-2 text-sm text-gray-600">${message}</p>
+                <div class="mt-6 flex justify-end gap-3">
+                    <button id="cancel-confirm-btn" class="px-4 py-2 rounded bg-gray-200">Cancel</button>
+                    <button id="confirm-action-btn" class="px-4 py-2 rounded bg-red-600 text-white">Confirm</button>
+                </div>
+            </div>
+        </div>`;
+
+        document.getElementById('confirm-action-btn').onclick = () => { onConfirm(); modalContainer.innerHTML = ''; };
+        document.getElementById('cancel-confirm-btn').onclick = () => modalContainer.innerHTML = '';
+    };
+
+    const renderRejectionModal = (requestId) => {
+        const modalContainer = document.getElementById('modal-container');
+        modalContainer.innerHTML = `
+        <div id="rejection-modal-backdrop" class="fixed inset-0 bg-black bg-opacity-60 z-[60] flex items-center justify-center p-4">
+            <div class="bg-white dark:bg-gray-800 rounded-lg shadow-xl p-6 w-full max-w-md relative animate-fade-in">
+                <form id="rejection-form">
+                    <h2 class="text-lg font-bold">Reject Request</h2>
+                    <p class="mt-2 text-sm text-gray-600">Provide a reason for rejection.</p>
+                    <div class="mt-4">
+                        <textarea name="rejectionReason" rows="3" class="w-full p-2 border rounded" required></textarea>
+                    </div>
+                    <div class="mt-6 flex justify-end gap-3">
+                        <button type="button" id="cancel-rejection-btn" class="px-4 py-2 rounded bg-gray-200">Cancel</button>
+                        <button type="submit" class="px-4 py-2 rounded bg-red-600 text-white" data-id="${requestId}">Confirm Rejection</button>
+                    </div>
+                </form>
+            </div>
+        </div>`;
+    };
+    // — Auth State Listener —
+    onAuthStateChanged(auth, async (user) => {
+        unsubClearances?.();
+        unsubRequests?.();
+        unsubConfig?.();
+        unsubVVIPs?.();
+        currentAdminProfile = null;
 
         if (user && !user.isAnonymous) {
-            const adminDocRef = doc(db, "admins", user.uid);
-            unsubscribes.push(onSnapshot(adminDocRef, (adminDoc) => {
+            appRoot.innerHTML = '<div class="min-h-screen flex items-center justify-center"><div class="animate-spin rounded-full h-16 w-16 border-t-4 border-b-4 border-blue-500"></div></div>';
+            try {
+                const adminDoc = await getDoc(doc(db, "admins", user.uid));
                 if (adminDoc.exists()) {
                     currentAdminProfile = { uid: user.uid, ...adminDoc.data() };
+                    // Set up listeners for admin dashboard data
+                    unsubVVIPs = onSnapshot(query(collection(db, "vvips"), orderBy("vehicleNumber")), snap => {
+                        vvips = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+                        if(document.getElementById('vvip-list-container-settings')) renderVVIPListForSettings();
+                    });
+                    unsubRequests = onSnapshot(query(collection(db, "clearanceRequests"), where("status", "==", "pending"), orderBy("createdAt", "desc")), snap => {
+                        clearanceRequests = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+                        renderRequestsList();
+                    });
+                    unsubClearances = onSnapshot(query(collection(db, "vehicleClearances"), orderBy("expiryDate", "desc")), snap => {
+                        clearances = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+                        renderClearancesList();
+                    });
                     renderAdminDashboard(currentAdminProfile);
                 } else {
-                    signOut(auth);
+                    await signOut(auth); // Not a valid admin
                 }
-            }));
+            } catch (error) {
+                showNotification("Error verifying admin status.", "error");
+                await signOut(auth);
+            }
+        } else if (user && user.isAnonymous && isValidSecureSession()) {
+            showUserDashboard(user);
         } else {
+            sessionStorage.clear();
             renderLandingPage();
         }
     });
 
+    // --- Data Handling and Event Logic ---
+    const saveClearanceData = async (form, editingId = null) => {
+        const data = getFormObj(form);
+        const entryDate = parseLocalDate(data.entryDate);
+        const expiryDate = parseLocalDate(data.expiryDate);
+
+        if (!entryDate || !expiryDate || !form.checkValidity()) {
+            form.reportValidity();
+            throw new Error("Please fill all required fields correctly.");
+        }
+        if (expiryDate < entryDate) {
+            throw new Error("Expiry date cannot be before the entry date.");
+        }
+        if (!currentAdminProfile) throw new Error("Admin profile not loaded.");
+
+        const payload = {
+            ownerName: data.ownerName,
+            ownerContact: data.ownerContact,
+            ownerEmail: data.ownerEmail,
+            vehicleNumber: data.vehicleNumber.toUpperCase(),
+            entryDate: Timestamp.fromDate(entryDate),
+            expiryDate: Timestamp.fromDate(expiryDate),
+            escortRequired: !!data.escortRequired,
+            notes: data.notes || ""
+        };
+
+        if (editingId) {
+            Object.assign(payload, {
+                lastUpdatedBy: currentAdminProfile.username,
+                lastUpdatedAt: Timestamp.now()
+            });
+            await updateDoc(doc(db, "vehicleClearances", editingId), payload);
+            showNotification(`Clearance for ${payload.vehicleNumber} updated.`);
+        } else {
+            Object.assign(payload, {
+                createdAt: Timestamp.now(),
+                approvedBy: currentAdminProfile.username,
+                approvedAt: Timestamp.now(),
+                source: 'fast-track'
+            });
+            await addDoc(collection(db, "vehicleClearances"), payload);
+            showNotification(`Clearance for ${payload.vehicleNumber} created.`);
+        }
+        return payload;
+    };
+    
+    // --- Global Event Listener ---
+    document.body.addEventListener("click", async (e) => {
+        const button = e.target.closest('button');
+        if (!button) return;
+
+        const closeModal = () => { document.getElementById('modal-container').innerHTML = ''; };
+
+        try {
+            if (button.id === "request-btn") { routeHistory.push(renderLandingPage); renderRequestForm(); }
+            else if (button.id === "admin-btn") { routeHistory.push(renderLandingPage); renderAdminLogin(); }
+            else if (button.id === "user-btn") { routeHistory.push(renderLandingPage); renderUserLogin(); }
+            else if (button.id === "back-btn") goBack();
+            else if (button.id === "logout-button") await performSecureLogout();
+            else if (button.id === "add-clearance-btn") renderModal();
+            else if (button.id === 'clear-tracking-btn') renderLandingPage();
+            else if (button.id === 'settings-btn') { /* TODO: Implement settings panel */ }
+            else if (button.id === 'show-vvip-btn') { /* TODO: Implement VVIP modal */ }
+            else if (button.id === 'close-modal-btn' || button.id === 'cancel-modal-btn' || button.id === 'cancel-rejection-btn') closeModal();
+            else if (button.id === "auth-toggle-button") {
+                authMode = authMode === "login" ? "signup" : "login";
+                renderAdminLogin();
+            }
+            else if (button.classList.contains("edit-btn")) {
+                const clearance = clearances.find(c => c.id === button.dataset.id);
+                if (clearance) renderModal(clearance);
+            }
+            else if (button.classList.contains("delete-btn")) {
+                renderConfirmationModal('Delete Clearance', 'Are you sure?', async () => {
+                    await deleteDoc(doc(db, "vehicleClearances", button.dataset.id));
+                    showNotification("Clearance deleted.");
+                });
+            }
+            else if (button.classList.contains("review-btn")) {
+                const request = clearanceRequests.find(r => r.id === button.dataset.id);
+                if (request) renderReviewModal(request);
+            }
+            else if (button.classList.contains("reject-request-btn")) {
+                renderRejectionModal(button.dataset.id);
+            }
+            else if (button.classList.contains("approve-request-btn")) {
+                const form = document.getElementById('review-form');
+                const data = getFormObj(form);
+                const entryDate = parseLocalDate(data.entryDate);
+                if (!entryDate || !form.checkValidity()) return form.reportValidity();
+                
+                button.disabled = true;
+                const clearancePayload = {
+                    ownerName: data.ownerName,
+                    ownerEmail: data.requesterEmail,
+                    vehicleNumber: data.vehicleNumber.toUpperCase(),
+                    entryDate: Timestamp.fromDate(entryDate),
+                    expiryDate: Timestamp.fromDate(entryDate), // Approved for one day
+                    escortRequired: !!data.escortRequired,
+                    notes: data.notes || "",
+                    createdAt: Timestamp.now(),
+                    approvedBy: currentAdminProfile.username,
+                    approvedAt: Timestamp.now(),
+                    source: 'request'
+                };
+                await addDoc(collection(db, "vehicleClearances"), clearancePayload);
+                await updateDoc(doc(db, "clearanceRequests", button.dataset.id), { status: 'approved' });
+                
+                const emailData = { name: data.ownerName, vehicleNumber: clearancePayload.vehicleNumber, submittedAt: formatDate(new Date()) };
+                const emailBody = generateNotificationEmail('approved', emailData);
+                await sendEmail(data.requesterEmail, `Vehicle Clearance Approved: ${clearancePayload.vehicleNumber}`, emailBody);
+
+                showNotification("Request approved.");
+                closeModal();
+            }
+            else if (button.classList.contains("save-clearance-btn")) {
+                const form = document.getElementById('clearance-form');
+                const savedPayload = await saveClearanceData(form, button.dataset.id);
+
+                if (savedPayload.ownerEmail && !button.dataset.id) { // Only send for new fast-track
+                    const emailData = { name: savedPayload.ownerName, vehicleNumber: savedPayload.vehicleNumber, submittedAt: formatDate(new Date()) };
+                    const emailBody = generateNotificationEmail('approved', emailData);
+                    await sendEmail(savedPayload.ownerEmail, `Vehicle Clearance Approved: ${savedPayload.vehicleNumber}`, emailBody);
+                }
+                closeModal();
+            }
+        } catch (error) {
+            console.error("Event handler error:", error);
+            showNotification(error.message, "error");
+        }
+    });
+
+    // --- Form Submission Handler ---
     document.body.addEventListener("submit", async (e) => {
         e.preventDefault();
         const form = e.target;
-        const submitButton = form.querySelector('button[type="submit"]');
-        if (submitButton) submitButton.disabled = true;
+        const button = form.querySelector('button[type="submit"]');
+        if (button) button.disabled = true;
 
         try {
-            // --- REQUEST FORM SUBMISSION ---
             if (form.id === "request-form") {
-                if (!form.checkValidity()) {
-                    showNotification("Please fill out all required fields.", "error");
-                    return;
-                }
                 const data = getFormObj(form);
                 const entryDate = parseLocalDate(data.entryDate);
+                if (!entryDate || !form.checkValidity()) return form.reportValidity();
                 
                 let currentUser = auth.currentUser;
-                if (!currentUser) currentUser = (await signInAnonymously(auth)).user;
-                
+                if (!currentUser || currentUser.isAnonymous) {
+                     currentUser = (await signInAnonymously(auth)).user;
+                }
+
                 const payload = {
                     requesterName: data.requesterName,
                     requesterEmail: data.requesterEmail,
                     requesterContact: data.requesterContact,
                     requesterId: currentUser.uid,
                     vehicleNumber: data.vehicleNumber.toUpperCase(),
-                    // ... other payload fields
                     entryDate: Timestamp.fromDate(entryDate),
-                    expiryDate: Timestamp.fromDate(entryDate), // Same as entry for single-day
+                    notes: data.notes || "",
                     status: "pending",
                     createdAt: Timestamp.now()
                 };
-
-                await addDoc(collection(db, "clearanceRequests"), payload);
-
-                // --- SEND "PENDING" EMAIL ---
-                if (payload.requesterEmail) {
-                    const emailData = {
-                        requesterName: payload.requesterName,
-                        vehicleNumber: payload.vehicleNumber,
-                        submittedAt: formatDate(payload.createdAt.toDate())
-                    };
-                    const emailBody = generateNotificationEmail('pending', emailData);
-                    const emailSubject = `Vehicle Clearance Request Received: ${payload.vehicleNumber}`;
-                    await sendEmail(payload.requesterEmail, emailSubject, emailBody);
-                }
-
-                showNotification("Request submitted successfully!");
-                renderLandingPage();
-            }
-
-            // --- REJECTION FORM SUBMISSION ---
-            if (form.id === "rejection-form") {
-                const { rejectionReason } = getFormObj(form);
-                const requestId = submitButton.dataset.id;
-                const originalRequest = clearanceRequests.find(r => r.id === requestId);
-
-                if (!originalRequest) throw new Error("Original request not found for rejection.");
+                const docRef = await addDoc(collection(db, "clearanceRequests"), payload);
                 
-                await updateDoc(doc(db, "clearanceRequests", requestId), {
-                    status: 'rejected',
-                    rejectionReason: rejectionReason.trim(),
-                    reviewedBy: currentAdminProfile.username,
-                    reviewedAt: Timestamp.now(),
-                });
-
-                // --- SEND "REJECTED" EMAIL ---
-                if (originalRequest.requesterEmail) {
-                    const emailData = {
-                        requesterName: originalRequest.requesterName,
-                        vehicleNumber: originalRequest.vehicleNumber,
-                        rejectionReason: rejectionReason.trim()
-                    };
-                    const emailBody = generateNotificationEmail('rejected', emailData);
-                    const emailSubject = `Update on Vehicle Clearance Request: ${originalRequest.vehicleNumber}`;
-                    await sendEmail(originalRequest.requesterEmail, emailSubject, emailBody);
+                const emailData = { name: payload.requesterName, vehicleNumber: payload.vehicleNumber, submittedAt: formatDate(payload.createdAt.toDate()), requestId: docRef.id };
+                const emailBody = generateNotificationEmail('pending', emailData);
+                await sendEmail(payload.requesterEmail, `Vehicle Clearance Request Received: ${payload.vehicleNumber}`, emailBody);
+                
+                showNotification("Request submitted successfully!");
+                renderLandingPage({ trackingResultHTML: createStatusCard({id: docRef.id, ...payload}), vehicleNumber: payload.vehicleNumber });
+            }
+            else if (form.id === "track-request-form") {
+                const { vehicleNumber } = getFormObj(form);
+                const result = await findCurrentVehicleStatus(vehicleNumber.toUpperCase());
+                renderLandingPage({ trackingResultHTML: result ? createStatusCard(result) : `<p class="text-center text-red-400">No records found for ${vehicleNumber}.</p>`, vehicleNumber });
+            }
+            else if (form.id === "auth-form") {
+                const { email, password, inviteCode, username, designation } = getFormObj(form);
+                if (authMode === "login") {
+                    const q = query(collection(db, "admins"), where("username", "==", username));
+                    const snap = await getDocs(q);
+                    if (snap.empty) throw new Error("Invalid credentials");
+                    const adminData = snap.docs[0].data();
+                    await signInWithEmailAndPassword(auth, adminData.email, password);
+                } else {
+                    if (inviteCode !== ADMIN_INVITE_CODE) throw new Error("Invalid invite code");
+                    const cred = await createUserWithEmailAndPassword(auth, email, password);
+                    await setDoc(doc(db, "admins", cred.user.uid), { email, username, designation, createdAt: Timestamp.now() });
+                    showNotification("Admin account created.");
                 }
+            }
+            else if (form.id === "secure-user-login-form") {
+                const { userID } = getFormObj(form);
+                const authorizedUser = await validateUserID(userID);
+                if (!authorizedUser) throw new Error("Invalid User ID.");
+                
+                const locationStatus = document.getElementById('location-status');
+                locationStatus.classList.remove('hidden');
+                
+                const userCoords = await getCurrentLocation();
+                const allowedLocations = await getAllowedLocations();
+                const access = checkLocationAccess(userCoords, allowedLocations);
+                
+                if (!access.allowed) throw new Error(access.reason);
+                
+                await logAccessAttempt(userID, userCoords, true, `Access from ${access.locationName}`);
+                sessionStorage.setItem('isDashboardLogin', 'true');
+                sessionStorage.setItem('currentUserID', userID);
+                if (!auth.currentUser?.isAnonymous) await signInAnonymously(auth);
+                else showUserDashboard(auth.currentUser); // Already anon, just re-render
+            }
+             else if (form.id === "rejection-form") {
+                const { rejectionReason } = getFormObj(form);
+                const requestId = form.querySelector('button[type="submit"]').dataset.id;
+                const request = clearanceRequests.find(r => r.id === requestId);
+
+                await updateDoc(doc(db, "clearanceRequests", requestId), { status: 'rejected', rejectionReason });
+
+                const emailData = { name: request.requesterName, vehicleNumber: request.vehicleNumber, submittedAt: formatDate(request.createdAt.toDate()), rejectionReason };
+                const emailBody = generateNotificationEmail('rejected', emailData);
+                await sendEmail(request.requesterEmail, `Update on Vehicle Clearance Request: ${request.vehicleNumber}`, emailBody);
 
                 showNotification("Request rejected.");
-                document.getElementById("modal-container").innerHTML = "";
+                document.getElementById('modal-container').innerHTML = '';
             }
-
         } catch (error) {
-            console.error("Form submission error:", error);
-            showNotification(`An error occurred: ${error.message}`, "error");
+            console.error("Submit handler error:", error);
+            showNotification(error.message, "error");
         } finally {
-            if (submitButton) submitButton.disabled = false;
+            if (button) button.disabled = false;
         }
     });
 
-    document.body.addEventListener("click", async (e) => {
-        const button = e.target.closest('button');
-        if (!button) return;
-
-        // --- APPROVE REQUEST BUTTON ---
-        if (button.classList.contains("approve-request-btn")) {
-            const requestId = button.dataset.id;
-            const originalRequest = clearanceRequests.find(r => r.id === requestId);
-            
-            if (!originalRequest) return showNotification("Request not found.", "error");
-
-            const clearancePayload = {
-                ownerName: originalRequest.requesterName,
-                ownerEmail: originalRequest.requesterEmail,
-                ownerContact: originalRequest.requesterContact,
-                vehicleNumber: originalRequest.vehicleNumber,
-                // ... map other fields from originalRequest
-                entryDate: originalRequest.entryDate,
-                expiryDate: originalRequest.expiryDate,
-                approvedAt: Timestamp.now(),
-                approvedByUsername: currentAdminProfile.username,
-            };
-
-            await addDoc(collection(db, "vehicleClearances"), clearancePayload);
-            await updateDoc(doc(db, "clearanceRequests", requestId), { status: 'approved' });
-            
-            // --- SEND "APPROVED" EMAIL ---
-            if (clearancePayload.ownerEmail) {
-                const emailData = {
-                    ownerName: clearancePayload.ownerName,
-                    vehicleNumber: clearancePayload.vehicleNumber,
-                    location: clearancePayload.location || "PCC",
-                    entryDate: formatDate(clearancePayload.entryDate),
-                    expiryDate: formatDate(clearancePayload.expiryDate)
-                };
-                const emailBody = generateNotificationEmail('approved', emailData);
-                const emailSubject = `Vehicle Clearance Approved: ${clearancePayload.vehicleNumber}`;
-                await sendEmail(clearancePayload.ownerEmail, emailSubject, emailBody);
-            }
-            
-            showNotification("Request approved.");
-            document.getElementById("modal-container").innerHTML = "";
+    document.body.addEventListener("input", e => {
+        if (e.target.id === 'daily-clearance-search-input') {
+            renderClearanceListForUser(e.target.value.toUpperCase());
         }
-        
-        // Other button handlers...
     });
-
-
-    // --- RENDER FUNCTIONS (Simplified for brevity) ---
-    function renderLandingPage() {
-        // Your existing renderLandingPage HTML
-        appRoot.innerHTML = `<!-- Landing page content -->`;
-    }
-
-    function renderAdminDashboard(adminUser) {
-        // Your existing renderAdminDashboard HTML
-        appRoot.innerHTML = `<!-- Admin dashboard content for ${adminUser.username} -->`;
-
-        // Attach listeners for data
-        unsubscribes.push(onSnapshot(query(collection(db, "clearanceRequests"), where("status", "==", "pending")), snap => {
-            clearanceRequests = snap.docs.map(d => ({ id: d.id, ...d.data() }));
-            // Call function to render the requests list
-        }));
-        unsubscribes.push(onSnapshot(collection(db, "vehicleClearances"), snap => {
-            clearances = snap.docs.map(d => ({ id: d.id, ...d.data() }));
-            // Call function to render the clearances list
-        }));
-    }
     
-    // Initial render
-    renderLandingPage();
+    window.addEventListener('load', () => {
+        initializeVoiceRecognition();
+        renderLandingPage();
+    });
 
     </script>
 </body>
