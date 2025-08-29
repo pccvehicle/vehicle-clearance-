@@ -3591,8 +3591,31 @@ const target = e.target;
                         status: "pending",
                         createdAt: Timestamp.now()
                     };
-                    try {
+                                        try {
                         const docRef = await addDoc(collection(db, "clearanceRequests"), payload);
+
+                        // --- START: New Acknowledgment Email Logic ---
+                        if (payload.requesterEmail) {
+                            try {
+                                showNotification("Sending acknowledgment email...", "info");
+                                const emailSubject = `Vehicle Clearance Request Received: ${payload.vehicleNumber}`;
+                                const emailPrompt = `Generate a professional and friendly HTML email to acknowledge that a vehicle clearance request has been RECEIVED and is now PENDING review.
+- Recipient's Name: ${payload.requesterName}
+- Vehicle Number: ${payload.vehicleNumber}
+- Submitted On: ${formatDate(payload.createdAt.toDate())}
+- Mention that they will receive another email once the request is approved or rejected.
+- The email should be well-formatted with HTML, using headings, bold text, and paragraphs for readability. Do not include any CSS or style tags.`;
+
+                                const emailBody = await callGeminiApi(emailPrompt);
+                                await sendEmail(payload.requesterEmail, emailSubject, emailBody);
+                            } catch (emailError) {
+                                console.error("Acknowledgment email failed:", emailError);
+                                // This error is logged to the console but not shown to the user,
+                                // as the primary action (saving the request) was successful.
+                            }
+                        }
+                        // --- END: New Acknowledgment Email Logic ---
+
                         showNotification("Request submitted successfully! You will be notified by email of any status changes.");
                         const newRequestData = { id: docRef.id, ...payload };
                         renderLandingPage({ trackingResultHTML: createStatusCard(newRequestData), vehicleNumber: newRequestData.vehicleNumber });
