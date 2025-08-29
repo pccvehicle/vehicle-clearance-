@@ -1831,7 +1831,7 @@ doc.autoTable({
             }
             listContainer.innerHTML = listHTML;
         };
-        const renderUserDashboard = (user, vehicleFilter = null) => {
+        function renderUserDashboard(user, vehicleFilter = null) {
             document.body.className = 'bg-gray-100 dark:bg-gray-900';
             const currentUserID = sessionStorage.getItem('currentUserID');
             const accessLocation = sessionStorage.getItem('accessLocation');
@@ -1889,11 +1889,9 @@ doc.autoTable({
         </div>`;
 
             renderClearanceListForUser(vehicleFilter);
-        }
-window.renderUserDashboard = renderUserDashboard;
-;
+        };
 
-        const renderAdminDashboard = (adminUser) => {
+        function renderAdminDashboard(adminUser) {
             document.body.className = 'bg-gray-100 dark:bg-gray-900';
             appRoot.innerHTML = `
         <div id="admin-dashboard-container">
@@ -2107,9 +2105,7 @@ unsubClearances = onSnapshot(query(collection(db, "vehicleClearances"), orderBy(
             renderAuthorizedUsersList();
             renderAllowedLocationsList();
             renderAccessLogsList();
-        }
-window.renderAdminDashboard = renderAdminDashboard;
-;
+        };
 
         
 const renderRequestsList = () => {
