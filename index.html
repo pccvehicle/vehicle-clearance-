@@ -461,11 +461,6 @@ __bindVCAliases();
 // removed shadowing let-decls
 // Provide runtime aliasing to existing functions when available
 // removed duplicate __bindVCAliases
-if (typeof renderLandingPage === 'function') window.renderLandingPage = renderLandingPage;
-    if (typeof initializeVoiceRecognition === 'function') window.initializeVoiceRecognition = initializeVoiceRecognition;
-    if (typeof renderAdminDashboard === 'function') window.renderAdminDashboard = renderAdminDashboard;
-  }
-}
 
 		
 	import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
