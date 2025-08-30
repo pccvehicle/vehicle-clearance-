@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>User Guide - Vehicle Clearance System</title>
+    <title>User Guide - Vehicle Clearance System v3.0</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <style>
@@ -92,7 +92,7 @@
             border-radius: 0.5rem;
             margin: 1rem 0;
         }
-        .tip-box {
+        .info-box {
             background-color: #dbeafe;
             border-left: 4px solid #3b82f6;
             padding: 1rem;
@@ -180,11 +180,11 @@
             </div>
             <div class="flex items-center gap-2">
                 <span class="hidden sm:inline text-sm text-gray-500">Version:</span>
-                <span class="text-sm font-medium text-blue-600">2.1</span>
-<a href="https://theva73.github.io/Vehicle-Clearance/" title="Return to Landing Page" class="ml-4 inline-flex items-center px-3 py-1.5 border border-blue-600 text-sm font-medium rounded-md text-blue-600 hover:bg-blue-100 transition">
-  🏠 Home
-</a>
-
+                <span class="text-sm font-medium text-blue-600">3.0</span>
+                <!-- THIS LINK HAS BEEN UPDATED AS PER YOUR REQUEST -->
+                <a href="https://pccvehicle.github.io/vehicle-clearance-/" title="Return to Landing Page" class="ml-4 inline-flex items-center px-3 py-1.5 border border-blue-600 text-sm font-medium rounded-md text-blue-600 hover:bg-blue-100 transition">
+                  🏠 Home
+                </a>
             </div>
         </div>
     </header>
@@ -200,23 +200,18 @@
                     <nav id="toc" class="space-y-1">
                         <a href="#introduction" class="nav-link">Introduction</a>
                         <a href="#quick-start" class="nav-link">Quick Start Guide</a>
-                        <a href="#landing-page" class="nav-link">Main Gateway</a>
                         <a href="#request-process" class="nav-link">Request Process</a>
-                        <a href="#user-dashboard" class="nav-link">APOs’ Dashboard</a>
                         <a href="#admin-dashboard" class="nav-link">Admin Dashboard</a>
-                        <a href="#settings-configuration" class="nav-link">Settings & Configuration</a>
                         <a href="#advanced-features" class="nav-link">Advanced Features</a>
                         <a href="#faq" class="nav-link">FAQ</a>
                         <a href="#troubleshooting" class="nav-link">Troubleshooting</a>
-                        <a href="#APOs’-best-practices" class="nav-link">APOs’ Best Practices</a>
-                        <a href="#system-requirements" class="nav-link">System Requirements</a>
                     </nav>
                     
                     <div class="mt-8 p-4 bg-blue-50 rounded-lg border border-blue-200">
                         <h4 class="font-semibold text-blue-900 mb-2">📊 Guide Stats</h4>
                         <div class="text-sm text-blue-700 space-y-1">
-                            <p>• <span id="sectionCount">12</span> Main Sections</p>
-                            <p>• <span id="faqCount">16</span> FAQ Items</p>
+                            <p>• <span id="sectionCount">7</span> Main Sections</p>
+                            <p>• <span id="faqCount">7</span> FAQ Items</p>
                             <p>• ⏱️ ~15 min read time</p>
                         </div>
                     </div>
@@ -229,152 +224,69 @@
                 <section id="introduction">
                     <div class="bg-gradient-to-r from-blue-500 to-indigo-600 text-white p-8 rounded-xl mb-8">
                         <h1 class="text-4xl font-bold mb-4">Welcome to the Vehicle Clearance System! 🚗</h1>
-                        <p class="text-xl text-blue-100 mb-4">Your comprehensive guide to secure vehicle access management</p>
-                        <div class="flex flex-wrap gap-4 text-sm">
-                            <span class="bg-white/20 px-3 py-1 rounded-full">✅ Easy to Follow</span>
-                            <span class="bg-white/20 px-3 py-1 rounded-full">🔒 APOs’ Focused</span>
-                            <span class="bg-white/20 px-3 py-1 rounded-full">📱 Mobile Friendly</span>
-                            <span class="bg-white/20 px-3 py-1 rounded-full">⚡ Real-time Updates</span>
-                        </div>
+                        <p class="text-xl text-blue-100 mb-4">Your guide to efficient and secure vehicle access management.</p>
                     </div>
 
-                    <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-                        <div class="text-center p-6 bg-green-50 rounded-lg border border-green-200">
-                            <div class="text-3xl mb-2">👥</div>
-                            <h3 class="font-semibold text-green-800">For General Users</h3>
-                            <p class="text-sm text-green-600 mt-1">Request clearances and track status</p>
-                        </div>
-                        <div class="text-center p-6 bg-blue-50 rounded-lg border border-blue-200">
-                            <div class="text-3xl mb-2">🛡️</div>
-                            <h3 class="font-semibold text-blue-800">For APOs’</h3>
-                            <p class="text-sm text-blue-600 mt-1">Access daily clearance lists</p>
-                        </div>
-                        <div class="text-center p-6 bg-purple-50 rounded-lg border border-purple-200">
-                            <div class="text-3xl mb-2">⚙️</div>
-                            <h3 class="font-semibold text-purple-800">For Administrators</h3>
-                            <p class="text-sm text-purple-600 mt-1">Manage the entire system</p>
-                        </div>
+                    <div class="info-box">
+                        <h4 class="font-bold text-blue-800 mb-2">✨ What's New in Version 3.0?</h4>
+                        <ul class="list-disc list-inside text-blue-700 text-sm space-y-1">
+                            <li><strong>Parking Time Slots:</strong> Select specific visiting hours when submitting a request.</li>
+                            <li><strong>Submission Cut-Off Time:</strong> Requests for same-day clearance must now be submitted before 14:00 (2 PM).</li>
+                            <li><strong>Email Notifications:</strong> Automatically receive email updates for request submission, approval, or rejection.</li>
+                            <li><strong>Admin WhatsApp Notifications:</strong> Admins can now send quick updates via WhatsApp directly from the dashboard.</li>
+                            <li><strong>24-Hour PDF Reports:</strong> Admins can generate a detailed 24-hour report, sorted by priority time slots, perfect for handovers.</li>
+                        </ul>
                     </div>
                 </section>
 
                 <!-- Quick Start Guide -->
                 <section id="quick-start">
                     <h2>🚀 Quick Start Guide</h2>
-                    <p>New to the system? Follow these simple steps to get started immediately:</p>
+                    <p>New to the system? Follow these simple steps to get started immediately.</p>
                     
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mt-6">
                         <div class="feature-card">
                             <div class="flex items-center mb-4">
                                 <div class="step-number">1</div>
-                                <h3 class="text-lg font-semibold">Request Vehicle Access</h3>
+                                <h3 class="text-lg font-semibold">Request Access</h3>
                             </div>
-                            <p>Click "Request Clearance" on the main page, fill out the form with your vehicle details, and submit.</p>
-                            <div class="tip-box mt-4">
-                                <p class="text-sm"><strong>💡 Tip:</strong> Have your vehicle registration number ready before starting.</p>
-                            </div>
+                            <p>Click "Request Clearance", fill out the form with vehicle and contact details, select a time slot, and submit before the 2 PM cut-off for same-day requests.</p>
                         </div>
                         
                         <div class="feature-card">
                             <div class="flex items-center mb-4">
                                 <div class="step-number">2</div>
-                                <h3 class="text-lg font-semibold">Track Your Request</h3>
+                                <h3 class="text-lg font-semibold">Track & Get Notified</h3>
                             </div>
-                            <p>Use the "Track Request" section on the main page to check if your clearance is approved, pending, or rejected.</p>
-                            <div class="tip-box mt-4">
-                                <p class="text-sm"><strong>💡 Tip:</strong> You can bookmark this page and check back anytime.</p>
-                            </div>
+                            <p>Use the "Track Request" feature on the main page. You'll also receive <strong>email notifications</strong> confirming your submission and final status.</p>
                         </div>
                         
                         <div class="feature-card">
                             <div class="flex items-center mb-4">
                                 <div class="step-number">3</div>
-                                <h3 class="text-lg font-semibold">For APOs’: Access Green List</h3>
+                                <h3 class="text-lg font-semibold">APOs: Access Green List</h3>
                             </div>
-                            <p>Use your assigned User ID and ensure you're at an authorized location to view today's cleared vehicles.</p>
-                            <div class="warning-box mt-4">
-                                <p class="text-sm"><strong>⚠️ Note:</strong> Requires location verification for APOs’.</p>
-                            </div>
+                            <p>Log in with your User ID at an authorized location to view the daily list of cleared vehicles. Use voice search for quick lookups.</p>
                         </div>
                         
                         <div class="feature-card">
                             <div class="flex items-center mb-4">
                                 <div class="step-number">4</div>
-                                <h3 class="text-lg font-semibold">For Admins: Manage System</h3>
+                                <h3 class="text-lg font-semibold">Admins: Manage System</h3>
                             </div>
-                            <p>Log in with your admin credentials to approve requests, manage clearances, and configure system settings.</p>
-                            <div class="tip-box mt-4">
-                                <p class="text-sm"><strong>💡 Tip:</strong> Check the pending requests section first for urgent approvals.</p>
-                            </div>
-                        </div>
-                    </div>
-                </section>
-
-                <!-- Landing Page Guide -->
-                <section id="landing-page">
-                    <h2>🏠 Main Gateway (Landing Page)</h2>
-                    <p>The landing page is your central hub for accessing all system features. It's designed for quick access and easy navigation.</p>
-                    
-                    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mt-6">
-                        <div class="feature-card">
-                            <div class="icon-wrapper bg-blue-100 text-blue-600">
-                                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                                    <path d="M15 14c.2-1 .7-1.7 1.5-2.5 1-.9 1.5-2.2 1.5-3.5A6 6 0 0 0 6 8c0 1 .2 2.2 1.5 3.5.7.7 1.3 1.5 1.5 2.5"></path>
-                                    <path d="M9 18h6"></path>
-                                    <path d="M2 22v-2a4 4 0 0 1 4-4h12a4 4 0 0 1 4 4v2"></path>
-                                </svg>
-                            </div>
-                            <h3 class="text-xl font-semibold mb-2">Request Clearance</h3>
-                            <p class="mb-3">Submit a new vehicle access request for approval by administrators.</p>
-                        </div>
-                        
-                        <div class="feature-card">
-                            <div class="icon-wrapper bg-green-100 text-green-600">
-                                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                                    <circle cx="11" cy="11" r="8"></circle>
-                                    <path d="m21 21-4.35-4.35"></path>
-                                </svg>
-                            </div>
-                            <h3 class="text-xl font-semibold mb-2">Track Request Status</h3>
-                            <p class="mb-3">Check the current status of your submitted clearance request.</p>
-                        </div>
-                        
-                        <div class="feature-card">
-                            <div class="icon-wrapper bg-indigo-100 text-indigo-600">
-                                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                                    <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path>
-                                </svg>
-                            </div>
-                            <h3 class="text-xl font-semibold mb-2">Admin Portal</h3>
-                            <p class="mb-3">Administrative access for system management and request approvals.</p>
-                        </div>
-                        
-                        <div class="feature-card">
-                            <div class="icon-wrapper bg-yellow-100 text-yellow-600">
-                                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                                    <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path>
-                                    <polyline points="22 4 12 14.01 9 11.01"></polyline>
-                                </svg>
-                            </div>
-                            <h3 class="text-xl font-semibold mb-2">Green List Dashboard</h3>
-                            <p class="mb-3">APOs’ personnel dashboard for viewing authorized vehicles.</p>
+                            <p>Log in to approve requests, send WhatsApp notifications, and generate 24-hour PDF reports for operational oversight.</p>
                         </div>
                     </div>
                 </section>
 
                 <!-- Request Process -->
                 <section id="request-process">
-                    <h2>📝 Complete Request Process</h2>
-                    <p>Learn how to submit a vehicle clearance request step-by-step.</p>
+                    <h2>📝 Submitting a Clearance Request</h2>
+                    <p>This section details the complete step-by-step process for requesting vehicle clearance.</p>
 
-                    <h3>Before You Start</h3>
+                    <h3>Key Submission Rules</h3>
                     <div class="warning-box">
-                        <p><strong>⚠️ Important:</strong> Have the following information ready:</p>
-                        <ul class="mt-2 ml-4 space-y-1">
-                            <li>• Complete vehicle registration number</li>
-                            <li>• Vehicle type and model</li>
-                            <li>• Intended entry and exit dates</li>
-                            <li>• Purpose of visit</li>
-                        </ul>
+                        <p><strong>⚠️ Important Cut-Off Time:</strong> To be eligible for <strong>same-day clearance</strong>, all requests must be submitted before <strong>14:00 (2:00 PM)</strong> local time. Requests submitted after this time must be for the next day or later.</p>
                     </div>
 
                     <h3>Step-by-Step Process</h3>
@@ -382,120 +294,75 @@
                         <div class="flex gap-4 p-4 bg-gray-50 rounded-lg">
                             <div class="step-number">1</div>
                             <div>
-                                <h4 class="font-semibold">Access the Request Form</h4>
-                                <p>Click "Request Clearance" on the main landing page.</p>
+                                <h4 class="font-semibold">Access the Form & Fill Details</h4>
+                                <p>Click "Request Clearance" on the main page. Enter your name, a valid email address for notifications, contact number, vehicle number, and vehicle type.</p>
                             </div>
                         </div>
                         <div class="flex gap-4 p-4 bg-gray-50 rounded-lg">
                             <div class="step-number">2</div>
                             <div>
-                                <h4 class="font-semibold">Fill in Details</h4>
-                                <p>Enter your name, vehicle registration number, vehicle type, and access dates.</p>
-                                <div class="tip-box mt-2">
-                                    <p class="text-sm"><strong>💡 Tip:</strong> Double-check the vehicle number for accuracy.</p>
-                                </div>
+                                <h4 class="font-semibold">Select Visiting Hours & Dates</h4>
+                                <p>Choose your intended <strong>visiting time slot</strong> from the dropdown menu. Then, select the entry date, keeping the 2 PM cut-off time in mind.</p>
                             </div>
                         </div>
                         <div class="flex gap-4 p-4 bg-gray-50 rounded-lg">
                             <div class="step-number">3</div>
                             <div>
-                                <h4 class="font-semibold">Location and Notes</h4>
-                                <p>Select the location and add any notes, like the purpose of the visit or special requirements.</p>
-                            </div>
-                        </div>
-                        <div class="flex gap-4 p-4 bg-gray-50 rounded-lg">
-                            <div class="step-number">4</div>
-                            <div>
-                                <h4 class="font-semibold">Submit and Track</h4>
-                                <p>Review all information, then click "Submit". You can track your request status from the main page.</p>
+                                <h4 class="font-semibold">Submit and Check Your Email</h4>
+                                <p>Review all information for accuracy and click "Submit". You will receive an email confirming that your request has been received and is pending review.</p>
                             </div>
                         </div>
                     </div>
 
                     <h3>After Submission</h3>
-                    <p>Once submitted, your request is reviewed by administrators. Possible statuses are:</p>
+                    <p>Once submitted, your request is sent to administrators for review. You can track the status on the main page, and you will receive a final email notification once it is approved or rejected.</p>
                     <ul>
-                        <li><strong>🟡 Pending:</strong> Your request is under review.</li>
-                        <li><strong>🟢 Approved:</strong> Access is granted.</li>
-                        <li><strong>🔴 Rejected:</strong> Access is denied (a reason will be provided).</li>
+                        <li><strong>🟡 Pending:</strong> Your request is under review. (Email #1 sent)</li>
+                        <li><strong>🟢 Approved:</strong> Access is granted. (Email #2 sent)</li>
+                        <li><strong>🔴 Rejected:</strong> Access is denied. (Email #2 sent with reason)</li>
                     </ul>
-                </section>
-
-                <!-- User Dashboard Guide -->
-                <section id="user-dashboard">
-                    <h2>👮 APOs’ Dashboard (Green List)</h2>
-                    <p>This dashboard provides real-time access to all vehicles authorized for the current day. It is designed for APOs’ personnel.</p>
-
-                    <h3>🔐 Secure Access Requirements</h3>
-                    <div class="warning-box">
-                        <p><strong>APOs’ Note:</strong> Access requires a valid User ID and physical presence at an authorized location (GPS verified).</p>
-                    </div>
-
-                    <h3>Key Features</h3>
-                    <div class="space-y-6 mt-6">
-                        <div class="feature-card">
-                            <h4 class="font-semibold text-green-700 mb-2">📋 Daily Clearance List</h4>
-                            <p>Displays all vehicles with valid clearance for today, showing registration number, owner, location, and any special notes.</p>
-                        </div>
-                        <div class="feature-card">
-                            <h4 class="font-semibold text-blue-700 mb-2">🔍 Intelligent Search</h4>
-                            <p>Use advanced speech recognition to quickly find vehicles without typing. Clearly speak the vehicle number, just enough for the system to recognize it.</p>
-                        </div>
-                        <div class="feature-card">
-                            <h4 class="font-semibold text-yellow-700 mb-2">⭐ VVIP Quick Reference</h4>
-                            <p>Access a complete list of VVIP vehicles and their designations instantly via the floating star button.</p>
-                        </div>
-                    </div>
                 </section>
 
                 <!-- Admin Dashboard Guide -->
                 <section id="admin-dashboard">
                     <h2>⚙️ Administrator Dashboard</h2>
-                    <p>The Admin Dashboard is the command center for managing requests, approving access, and configuring system-wide settings.</p>
+                    <p>The Admin Dashboard is the command center for managing the entire vehicle clearance workflow.</p>
 
-                    <h3>🔄 Request Management</h3>
-                    <p>All new requests appear in the "Pending Requests" queue. Administrators can review, edit, approve, or reject each request. Approving a request moves it to the active clearances list.</p>
-
-                    <h3>📊 Active Clearance Management</h3>
-                    <p>View and manage all approved vehicle clearances. Admins can edit details, extend dates, and generate a comprehensive 24-hour PDF report for shift handovers or record-keeping.</p>
-                </section>
-
-                <!-- Settings and Configuration -->
-                <section id="settings-configuration">
-                    <h2>🔧 System Settings & Configuration</h2>
-                    <p>Configure and maintain the system for optimal APOs’ and efficiency.</p>
-                    <div class="space-y-6 mt-6">
+                    <h3>New Admin Features</h3>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mt-6">
                         <div class="feature-card">
-                            <h4 class="font-semibold">👑 VVIP Management</h4>
-                            <p>Maintain a special list of VVIP vehicles. Add, edit, or remove entries, which will be highlighted for APOs’ personnel.</p>
+                            <div class="icon-wrapper bg-green-100 text-green-600">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M.057 24l1.687-6.163c-1.041-1.804-1.588-3.849-1.587-5.946.003-6.556 5.338-11.891 11.893-11.891 3.181.001 6.167 1.24 8.413 3.488 2.245 2.248 3.481 5.236 3.48 8.414-.003 6.557-5.338 11.892-11.894 11.892-1.99-.001-3.951-.5-5.688-1.448l-6.305 1.654zm6.597-3.807c1.676.995 3.276 1.591 5.392 1.592 5.448 0 9.886-4.434 9.889-9.885.002-5.462-4.415-9.89-9.881-9.892-5.452 0-9.887 4.434-9.889 9.886-.001 2.267.655 4.398 1.908 6.161l.217.324-1.251 4.565 4.654-1.225.308.212z"/></svg>
+                            </div>
+                            <h4 class="font-semibold text-xl mb-2">WhatsApp Notifications</h4>
+                            <p>For urgent communication, you can send pre-formatted or custom WhatsApp messages directly to the requester's contact number from the clearance or request review screens.</p>
                         </div>
                         <div class="feature-card">
-                            <h4 class="font-semibold">🔐 Advanced Access Control</h4>
-                            <p>Manage who can access the APOs’ Dashboard by creating User IDs and setting up authorized physical locations (Geofencing). All access attempts are logged for APOs’ audits.</p>
-                        </div>
-                        <div class="feature-card">
-                            <h4 class="font-semibold">💾 Database Management</h4>
-                            <p>Monitor system statistics, export the entire database for backup, and perform maintenance operations like archiving old records.</p>
+                            <div class="icon-wrapper bg-red-100 text-red-600">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg>
+                            </div>
+                            <h4 class="font-semibold text-xl mb-2">24-Hour PDF Report</h4>
+                            <p>Generate a comprehensive PDF report of all active and pending clearances within a 24-hour window. The report automatically sorts entries by time slot, prioritizing key areas for easy review during shift changes.</p>
                         </div>
                     </div>
                 </section>
 
                 <!-- Advanced Features -->
                 <section id="advanced-features">
-                    <h2>🚀 Advanced Features & Tips</h2>
-                    <p>Discover powerful features to maximize the system's effectiveness.</p>
+                    <h2>🚀 Advanced Features & System Logic</h2>
+                    <p>Discover powerful features that enhance security and efficiency.</p>
                     <div class="space-y-6 mt-6">
                         <div class="feature-card">
-                            <h4 class="font-semibold">🎤 Voice Search Technology</h4>
-                            <p>Use advanced speech recognition to quickly find vehicles without typing. Clearly speak the vehicle number, just enough for the system to recognize it. </p>
+                            <h4 class="font-semibold">🎤 Voice Search for APOs</h4>
+                            <p>For hands-free operation, APOs can use the voice search feature on their dashboard. Simply activate it and speak the vehicle number to instantly filter the green list.</p>
                         </div>
                         <div class="feature-card">
-                            <h4 class="font-semibold">📱 Mobile Optimization</h4>
-                            <p>The system is fully optimized for mobile devices, featuring a responsive design, touch-optimized controls, and fast loading times.</p>
+                            <h4 class="font-semibold">🔔 Automated Notifications</h4>
+                            <p>The system keeps everyone informed. Requesters receive timely <strong>email notifications</strong> at every stage, while admins have the option to send manual <strong>WhatsApp messages</strong> for high-priority communications.</p>
                         </div>
                         <div class="feature-card">
-                            <h4 class="font-semibold">🔄 Real-Time Updates</h4>
-                            <p>All dashboards update in real-time. New clearances, approvals, and VVIP list changes appear instantly across all connected devices without needing a page refresh.</p>
+                            <h4 class="font-semibold">📍 Geofenced Security</h4>
+                            <p>Access to the APOs’ Green List Dashboard is restricted by geofencing. Personnel must have a valid User ID and be physically present at an authorized location to view the data, preventing unauthorized remote access.</p>
                         </div>
                     </div>
                 </section>
@@ -503,42 +370,41 @@
                 <!-- FAQ Section -->
                 <section id="faq">
                     <h2>❓ Frequently Asked Questions (FAQ)</h2>
-                    <p>Find quick answers to common questions.</p>
                     <div class="space-y-4 mt-6">
                         <div class="faq-item">
                             <div class="faq-question" onclick="toggleFaq(this)">
-                                <span>How do I submit a vehicle clearance request?</span>
+                                <span>What is the daily cut-off time for new requests?</span>
                                 <span class="toggle-icon text-gray-400 transition-transform">+</span>
                             </div>
                             <div class="faq-answer">
-                                <p>Click "Request Clearance" on the main page, fill out the form with your vehicle details, and submit. You can track the status from the main page.</p>
+                                <p>For a request to be considered for same-day access, it must be submitted before 14:00 (2:00 PM). Any requests made after this time will need to be for the following day or later.</p>
                             </div>
                         </div>
                         <div class="faq-item">
                             <div class="faq-question" onclick="toggleFaq(this)">
-                                <span>Why do I need location verification for the APOs’ Dashboard?</span>
+                                <span>How will I be notified about my request's status?</span>
                                 <span class="toggle-icon text-gray-400 transition-transform">+</span>
                             </div>
                             <div class="faq-answer">
-                                <p>This APOs’ feature ensures only authorized personnel at approved locations can access sensitive vehicle clearance data, preventing remote unauthorized access.</p>
+                                <p>You will receive automated emails. The first email confirms your submission is pending. A second email will inform you if your request has been approved or rejected. You can also use the "Track Request" feature on the main page.</p>
                             </div>
                         </div>
                          <div class="faq-item">
                             <div class="faq-question" onclick="toggleFaq(this)">
-                                <span>What is the VVIP list?</span>
+                                <span>Can administrators generate reports?</span>
                                 <span class="toggle-icon text-gray-400 transition-transform">+</span>
                             </div>
                             <div class="faq-answer">
-                                <p>The VVIP list contains important vehicles that require special recognition. It is managed by administrators and is always accessible to APOs’ staff on their dashboard.</p>
+                                <p>Yes. Administrators can generate a 24-hour PDF report from their dashboard. This report lists all currently active and pending clearances and is sorted by time slots, making it ideal for daily briefings and shift handovers.</p>
                             </div>
                         </div>
                         <div class="faq-item">
                             <div class="faq-question" onclick="toggleFaq(this)">
-                                <span>What if my request gets rejected?</span>
+                                <span>Why do I need to select a time slot?</span>
                                 <span class="toggle-icon text-gray-400 transition-transform">+</span>
                             </div>
                             <div class="faq-answer">
-                                <p>The reason for rejection will be shown when you track your request. You can then submit a new, corrected request or contact an administrator for clarification.</p>
+                                <p>Selecting a visiting time slot helps administrators manage parking availability and operational capacity, ensuring a smoother and more organized entry process for everyone.</p>
                             </div>
                         </div>
                     </div>
@@ -550,84 +416,19 @@
                     <p>Quick solutions to common issues.</p>
                     <div class="space-y-6 mt-6">
                         <div class="feature-card">
+                            <h4 class="font-semibold text-yellow-700 mb-2">Notification Issues</h4>
+                             <div class="trouble-solution">
+                                <p class="font-medium">Problem: I didn't receive an email notification.</p>
+                                <p class="text-gray-600">Solutions: First, check your spam or junk folder. Ensure you entered your email address correctly when submitting the request. You can always use the "Track Request" feature on the main page for a real-time status check.</p>
+                            </div>
+                        </div>
+                        <div class="feature-card">
                             <h4 class="font-semibold text-red-700 mb-2">Access & Login Issues</h4>
                             <div class="trouble-solution">
                                 <p class="font-medium">Problem: Cannot access APOs’ Dashboard.</p>
-                                <p class="text-gray-600">Solutions: Verify your User ID is correct, you are at an authorized location with location services enabled, and you have an internet connection. Contact an admin to check your account status.</p>
+                                <p class="text-gray-600">Solutions: Verify your User ID is correct, you are at an authorized location with location services enabled on your device, and you have a stable internet connection. Contact an admin to confirm your account status.</p>
                             </div>
                         </div>
-                        <div class="feature-card">
-                            <h4 class="font-semibold text-yellow-700 mb-2">Search & Data Issues</h4>
-                             <div class="trouble-solution">
-                                <p class="font-medium">Problem: Vehicle not found in search.</p>
-                                <p class="text-gray-600">Solutions: Double-check the vehicle number, ensure the clearance is for today's date, and confirm the request was approved.</p>
-                            </div>
-                        </div>
-                        <div class="feature-card">
-                            <h4 class="font-semibold text-blue-700 mb-2">Mobile Device Issues</h4>
-                             <div class="trouble-solution">
-                                <p class="font-medium">Problem: Location services not working.</p>
-                                <p class="text-gray-600">Solutions: Enable location in your device and browser settings. For a better GPS signal, try moving outdoors. Restarting your device may also help.</p>
-                            </div>
-                        </div>
-                        <div class="feature-card">
-                            <h4 class="font-semibold text-purple-700 mb-2">System Performance Issues</h4>
-                            <div class="trouble-solution">
-                                <p class="font-medium">Problem: Slow loading or real-time updates not working.</p>
-                                <p class="text-gray-600">Solutions: Check your internet connection. Try refreshing the page or clearing your browser cache. If the issue persists, contact an administrator.</p>
-                            </div>
-                        </div>
-                    </div>
-                </section>
-
-                <!-- APOs’ Best Practices -->
-                <section id="APOs’-best-practices">
-                    <h2>🛡️ APOs’ Best Practices</h2>
-                    <p>Essential guidelines for the safe operation of the system.</p>
-                    <div class="space-y-6 mt-6">
-                        <div class="feature-card">
-                            <h4 class="font-semibold text-red-700 mb-2">👤 For APOs’ Personnel</h4>
-                            <ul class="mt-2 ml-4 space-y-2 text-sm">
-                                <li>• Never share your User ID.</li>
-                                <li>• Always log out after your shift.</li>
-                                <li>• Report any suspicious activity immediately.</li>
-                            </ul>
-                        </div>
-                        <div class="feature-card">
-                            <h4 class="font-semibold text-blue-700 mb-2">👨‍💼 For Administrators</h4>
-                            <ul class="mt-2 ml-4 space-y-2 text-sm">
-                                <li>• Regularly update passwords for admin accounts.</li>
-                                <li>• Monitor access logs for unusual patterns.</li>
-                                <li>• Backup data regularly.</li>
-                            </ul>
-                        </div>
-                    </div>
-                </section>
-
-                <!-- System Requirements -->
-                <section id="system-requirements">
-                    <h2>🖥️ System Requirements & Compatibility</h2>
-                    <p>Ensure your devices and browsers are compatible with the system.</p>
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mt-6">
-                        <div class="feature-card">
-                            <h4 class="font-semibold text-blue-700 mb-2">💻 Desktop/Laptop</h4>
-                            <ul class="text-sm space-y-1">
-                                <li>• <strong>OS:</strong> Windows 10+, macOS 10.14+</li>
-                                <li>• <strong>Browser:</strong> Chrome 90+, Firefox 88+, Safari 14+, Edge 90+</li>
-                                <li>• <strong>Hardware:</strong> 4GB RAM, Stable Internet, Microphone (for voice search)</li>
-                            </ul>
-                        </div>
-                        <div class="feature-card">
-                            <h4 class="font-semibold text-green-700 mb-2">📱 Mobile Device</h4>
-                             <ul class="text-sm space-y-1">
-                                <li>• <strong>OS:</strong> iOS 12.0+, Android 8.0+</li>
-                                <li>• <strong>Browser:</strong> Latest Chrome, Safari, or Firefox</li>
-                                <li>• <strong>Permissions:</strong> Location (GPS) and Microphone access required.</li>
-                            </ul>
-                        </div>
-                    </div>
-                     <div class="warning-box mt-6">
-                        <p><strong>⚠️ Important:</strong> Internet Explorer is not supported. VPNs or ad blockers may interfere with system functionality.</p>
                     </div>
                 </section>
             </main>
@@ -639,11 +440,12 @@
         function toggleFaq(element) {
             const faqItem = element.closest('.faq-item');
             const isActive = faqItem.classList.contains('active');
-            document.querySelectorAll('.faq-item').forEach(item => {
-                item.classList.remove('active');
-            });
+            // Optional: Close others when one opens
+            // document.querySelectorAll('.faq-item').forEach(item => item.classList.remove('active'));
             if (!isActive) {
                 faqItem.classList.add('active');
+            } else {
+                faqItem.classList.remove('active');
             }
         }
 
@@ -653,7 +455,8 @@
             const navLinks = document.querySelectorAll('.nav-link');
             let current = '';
             sections.forEach(section => {
-                if (window.pageYOffset >= section.offsetTop - 200) {
+                const sectionTop = section.offsetTop;
+                if (window.pageYOffset >= sectionTop - 150) {
                     current = section.getAttribute('id');
                 }
             });
