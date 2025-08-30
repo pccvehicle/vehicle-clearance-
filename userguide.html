@@ -160,10 +160,8 @@
     </style>
 </head>
 <body class="bg-gray-50 text-gray-700">
-    <!-- Progress Indicator -->
     <div class="progress-indicator" id="progressBar"></div>
 
-    <!-- Header -->
     <header class="bg-white shadow-sm sticky top-0 z-50">
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 flex justify-between items-center">
             <div class="flex items-center gap-3">
@@ -181,7 +179,6 @@
             <div class="flex items-center gap-2">
                 <span class="hidden sm:inline text-sm text-gray-500">Version:</span>
                 <span class="text-sm font-medium text-blue-600">3.0</span>
-                <!-- THIS LINK HAS BEEN UPDATED AS PER YOUR REQUEST -->
                 <a href="https://pccvehicle.github.io/vehicle-clearance-/" title="Return to Landing Page" class="ml-4 inline-flex items-center px-3 py-1.5 border border-blue-600 text-sm font-medium rounded-md text-blue-600 hover:bg-blue-100 transition">
                   🏠 Home
                 </a>
@@ -189,11 +186,9 @@
         </div>
     </header>
 
-    <!-- Main Content -->
     <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <div class="grid grid-cols-1 lg:grid-cols-4 gap-8">
 
-            <!-- Sidebar Navigation -->
             <aside class="lg:col-span-1">
                 <div class="sticky top-24">
                     <h3 class="text-lg font-semibold mb-4 text-gray-900">Quick Navigation</h3>
@@ -218,9 +213,7 @@
                 </div>
             </aside>
 
-            <!-- Content Area -->
             <main class="lg:col-span-3 content">
-                <!-- Introduction -->
                 <section id="introduction">
                     <div class="bg-gradient-to-r from-blue-500 to-indigo-600 text-white p-8 rounded-xl mb-8">
                         <h1 class="text-4xl font-bold mb-4">Welcome to the Vehicle Clearance System! 🚗</h1>
@@ -239,7 +232,6 @@
                     </div>
                 </section>
 
-                <!-- Quick Start Guide -->
                 <section id="quick-start">
                     <h2>🚀 Quick Start Guide</h2>
                     <p>New to the system? Follow these simple steps to get started immediately.</p>
@@ -279,7 +271,6 @@
                     </div>
                 </section>
 
-                <!-- Request Process -->
                 <section id="request-process">
                     <h2>📝 Submitting a Clearance Request</h2>
                     <p>This section details the complete step-by-step process for requesting vehicle clearance.</p>
@@ -315,7 +306,7 @@
                     </div>
 
                     <h3>After Submission</h3>
-                    <p>Once submitted, your request is sent to administrators for review. You can track the status on the main page, and you will receive a final email notification once it is approved or rejected.</p>
+                    <p>Once submitted, your request is sent to administrators for review. You can track the status on the main page, and you will receive a final email notification once it is either approved or rejected.</p>
                     <ul>
                         <li><strong>🟡 Pending:</strong> Your request is under review. (Email #1 sent)</li>
                         <li><strong>🟢 Approved:</strong> Access is granted. (Email #2 sent)</li>
@@ -323,7 +314,6 @@
                     </ul>
                 </section>
 
-                <!-- Admin Dashboard Guide -->
                 <section id="admin-dashboard">
                     <h2>⚙️ Administrator Dashboard</h2>
                     <p>The Admin Dashboard is the command center for managing the entire vehicle clearance workflow.</p>
@@ -347,7 +337,6 @@
                     </div>
                 </section>
 
-                <!-- Advanced Features -->
                 <section id="advanced-features">
                     <h2>🚀 Advanced Features & System Logic</h2>
                     <p>Discover powerful features that enhance security and efficiency.</p>
@@ -367,7 +356,6 @@
                     </div>
                 </section>
 
-                <!-- FAQ Section -->
                 <section id="faq">
                     <h2>❓ Frequently Asked Questions (FAQ)</h2>
                     <div class="space-y-4 mt-6">
@@ -377,7 +365,7 @@
                                 <span class="toggle-icon text-gray-400 transition-transform">+</span>
                             </div>
                             <div class="faq-answer">
-                                <p>For a request to be considered for same-day access, it must be submitted before 14:00 (2:00 PM). Any requests made after this time will need to be for the following day or later.</p>
+                                <p>For a request to be considered for same-day access, it must be submitted before 14:00 (2:00 PM). Any requests made after this time must be for the following day or later.</p>
                             </div>
                         </div>
                         <div class="faq-item">
@@ -410,7 +398,6 @@
                     </div>
                 </section>
 
-                <!-- Troubleshooting -->
                 <section id="troubleshooting">
                     <h2>🔧 Troubleshooting Guide</h2>
                     <p>Quick solutions to common issues.</p>
@@ -426,7 +413,14 @@
                             <h4 class="font-semibold text-red-700 mb-2">Access & Login Issues</h4>
                             <div class="trouble-solution">
                                 <p class="font-medium">Problem: Cannot access APOs’ Dashboard.</p>
-                                <p class="text-gray-600">Solutions: Verify your User ID is correct, you are at an authorized location with location services enabled on your device, and you have a stable internet connection. Contact an admin to confirm your account status.</p>
+                                <p class="text-gray-600"><strong>Solutions:</strong> Please verify the following:
+                                    <ul class="list-disc list-inside mt-2">
+                                        <li>Your User ID is correct.</li>
+                                        <li>You are at an authorized location with location services enabled on your device.</li>
+                                        <li>You have a stable internet connection.</li>
+                                    </ul>
+                                    <p class="mt-2">If the issue persists, contact an administrator to confirm your account status.</p>
+                                </p>
                             </div>
                         </div>
                     </div>
