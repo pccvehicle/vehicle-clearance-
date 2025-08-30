@@ -2583,24 +2583,29 @@ const renderRequestsList = () => {
                         <input type="checkbox" name="escortRequired" class="h-5 w-5 rounded text-blue-600" ${edit?.escortRequired ? 'checked' : ''}/>
                         <label class="ml-2 text-gray-700 dark:text-gray-300">Escort Required</label>
                     </div>
-                    <div class="flex flex-col sm:flex-row justify-between gap-3 pt-4">
-  ${!isEdit ? `
-  <button type="button"
-          class="save-and-whatsapp-btn flex-1 px-4 py-3 rounded-lg bg-green-600 text-white hover:bg-green-700 mobile-button flex items-center justify-center"
-          title="Save & Send via WhatsApp">
-      ${icons.whatsapp}
-  </button>` : ''}
-  <button type="button" id="cancel-modal-btn"
-          class="flex-1 px-4 py-3 rounded-lg bg-red-600 text-white hover:bg-red-700 mobile-button">
-      Cancel
-  </button>
-  <button type="button"
-          class="save-clearance-btn flex-1 px-4 py-3 rounded-lg bg-blue-600 text-white hover:bg-blue-700 mobile-button"
-          data-id="${edit?.id || ''}">
-      ${isEdit ? 'Update' : 'Save'}
-  </button>
-</div>
-                </form>
+                    <div class="flex items-center gap-3 pt-4 border-t border-gray-200 dark:border-gray-700">
+    <!-- WhatsApp Button (Icon Only) -->
+    <a href="${isEdit && edit.ownerContact ? `https://wa.me/${normalizePhoneNumberForWhatsApp(edit.ownerContact)}` : '#'}"
+       target="_blank"
+       title="Send WhatsApp Message"
+       onclick="if(this.classList.contains('cursor-not-allowed')) event.preventDefault();"
+       class="flex-1 px-4 py-3 rounded-lg bg-green-600 text-white hover:bg-green-700 mobile-button flex items-center justify-center ${!(isEdit && edit.ownerContact) ? 'opacity-50 cursor-not-allowed' : ''}">
+        ${icons.whatsapp}
+    </a>
+
+    <!-- Cancel Button (Red) -->
+    <button type="button" id="cancel-modal-btn"
+            class="flex-1 px-4 py-3 rounded-lg bg-red-600 text-white hover:bg-red-700 mobile-button">
+        Cancel
+    </button>
+
+    <!-- Save/Update Button (Blue) -->
+    <button type="button"
+            class="save-clearance-btn flex-1 px-4 py-3 rounded-lg bg-blue-600 text-white hover:bg-blue-700 mobile-button"
+            data-id="${edit?.id || ''}">
+        ${isEdit ? 'Update' : 'Save'}
+    </button>
+</div></form>
             </div>
         </div>`;
         };
