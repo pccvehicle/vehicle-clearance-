@@ -239,7 +239,11 @@
 </head>
 <body class="">
     <div id="app-root"></div>
-    <script type="module">
+    
+
+    <!-- Background Sync Manager -->
+    <script src="background-sync.js"></script>
+<script type="module">
 		
 	import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
     import {
@@ -3675,33 +3679,46 @@ await sendEmail(originalRequest.requesterEmail, emailSubject, emailBody);
                         status: "pending",
                         createdAt: Timestamp.now()
                     };
-                                        try {
-                        const docRef = await addDoc(collection(db, "clearanceRequests"), payload);
+                                        if (navigator.onLine) {
+    // --- ONLINE PATH: Submit directly to Firebase --- 
+    try {
+        const docRef = await addDoc(collection(db, "clearanceRequests"), payload);
 
-                        // --- START: New Acknowledgment Email Logic ---
-                        if (payload.requesterEmail) {
-                            try {
-                                showNotification("Sending acknowledgment email...", "info");
-                                const emailSubject = `Request Received: ${payload.vehicleNumber}`;
-                                const emailData = {
-                                    requesterName: payload.requesterName,
-                                    vehicleNumber: payload.vehicleNumber,
-                                    submittedAt: new Date().toLocaleString()
-                                };
-                                const emailBody = generateNotificationEmail('pending', emailData);
-                                await sendEmail(payload.requesterEmail, emailSubject, emailBody);
-                            } catch (emailError) {
-                                console.error("Acknowledgment email failed:", emailError);
-                                // Do not block the main flow if email fails
-                            }
-                        }
-                        // --- END: New Acknowledgment Email Logic ---
+        if (payload.requesterEmail) {
+            try {
+                showNotification("Sending acknowledgment email...", "info");
+                const emailSubject = `Request Received: ${payload.vehicleNumber}`;
+                const emailData = {
+                    requesterName: payload.requesterName,
+                    vehicleNumber: payload.vehicleNumber,
+                    submittedAt: new Date().toLocaleString()
+                };
+                const emailBody = generateNotificationEmail('pending', emailData);
+                await sendEmail(payload.requesterEmail, emailSubject, emailBody);
+            } catch (emailError) {
+                console.error("Acknowledgment email failed:", emailError);
+            }
+        }
 
-                        showNotification("Request submitted successfully! You will be notified by email of any status changes.");
-                        const newRequestData = { id: docRef.id, ...payload };
-                        renderLandingPage({ trackingResultHTML: createStatusCard(newRequestData), vehicleNumber: newRequestData.vehicleNumber });
-                    } catch (error) { showNotification("Failed to submit request. Please try again.", "error"); }
-                }
+        showNotification("Request submitted successfully!");
+        const newRequestData = { id: docRef.id, ...payload };
+        renderLandingPage({ trackingResultHTML: createStatusCard(newRequestData), vehicleNumber: newRequestData.vehicleNumber });
+    } catch (error) {
+        showNotification("Failed to submit request. Please try again.", "error");
+    }
+} else {
+    // --- OFFLINE PATH: Save for background sync --- 
+    try {
+        await saveRequestForSync(payload); // Function from background-sync.js 
+        await registerBackgroundSync(); // Function from background-sync.js 
+        showNotification("You are offline. Your request is saved and will be sent when you're back online.", "info");
+        // Go back to the landing page after saving the offline request 
+        renderLandingPage();
+    } catch (error) {
+        showNotification("Could not save offline request. Please try again.", "error");
+    }
+}
+}
             } catch (error) {
                 showNotification(`Error: ${error.message}`, "error");
             } finally {
@@ -4066,8 +4083,3 @@ const waitForDb = (timeout = 5000) => {
 
 </body>
 </html>
-
-	
-		
-		
-		
