@@ -3991,7 +3991,6 @@ const waitForDb = (timeout = 5000) => {
       }
     };
     tryWire();
-	... (code from the global search script ends here) ...
 
       const obs = new MutationObserver(tryWire);
       obs.observe(document.body, {childList:true, subtree:true});
