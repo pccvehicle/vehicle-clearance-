@@ -3991,8 +3991,10 @@ const waitForDb = (timeout = 5000) => {
       }
     };
     tryWire();
-    const obs = new MutationObserver(tryWire);
-    obs.observe(document.body, {childList:true, subtree:true});
+	... (code from the global search script ends here) ...
+
+      const obs = new MutationObserver(tryWire);
+      obs.observe(document.body, {childList:true, subtree:true});
   }
 
   wireOnlyInAdmin();
@@ -4000,62 +4002,6 @@ const waitForDb = (timeout = 5000) => {
 </script>
 
 <!-- BEGIN: Expiry Date Admin-Lock (v3 minimal) -->
-<script>
-(function(){
-  try {
-    const isAdmin = sessionStorage.getItem('isDashboardLogin') === 'true';
-    const getExpiry = () => document.getElementById('request-expiry-date') || document.getElementById('expiryDate');
-    const getEntry  = () => document.getElementById('request-entry-date') || document.getElementById('entryDate');
-
-    const lockExpiry = () => {
-      const el = getExpiry();
-      if (!el) return;
-      if (isAdmin) {
-        el.removeAttribute('disabled');
-        el.removeAttribute('readonly');
-        el.title = '';
-      } else {
-        el.setAttribute('disabled','');
-        el.setAttribute('readonly','');
-        el.title = 'Expiry date is set by Admin';
-      }
-    };
-
-    const wireEntrySync = () => {
-      const entry = getEntry();
-      const expiry = getExpiry();
-      if (!entry || !expiry) return;
-      entry.addEventListener('change', () => {
-        if (!isAdmin && entry.value && !expiry.value) {
-          const wasDisabled = expiry.disabled;
-          expiry.disabled = false;
-          expiry.value = entry.value;
-          expiry.disabled = wasDisabled;
-        }
-      });
-    };
-
-    document.addEventListener('submit', function(e){
-      const form = e.target;
-      if (!form || form.id !== 'request-form') return;
-      const expiry = getExpiry();
-      const entry = getEntry();
-      if (!isAdmin && expiry) {
-        if (entry && !expiry.value && entry.value) {
-          expiry.disabled = false;
-          expiry.value = entry.value;
-        }
-        expiry.disabled = false;
-        setTimeout(() => expiry.disabled = true, 0);
-      }
-    }, true);
-
-    const init = () => { lockExpiry(); wireEntrySync(); };
-    window.addEventListener('load', init);
-    new MutationObserver(init).observe(document.documentElement, {childList:true, subtree:true});
-  } catch(e){ console.error('expiry lock error', e); }
-})();
-
 <script>
 (function(){
   try {
@@ -4121,3 +4067,8 @@ const waitForDb = (timeout = 5000) => {
 
 </body>
 </html>
+
+	
+		
+		
+		
