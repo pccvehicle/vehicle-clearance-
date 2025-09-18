@@ -153,7 +153,7 @@
   const formatDate = (tsOrDate) => {
     const d = tsOrDate instanceof Date ? tsOrDate : (tsOrDate && tsOrDate.toDate ? tsOrDate.toDate() : null);
     if(!d) return "—";
-    return d.toLocaleDateString('en-GB', { year:'numeric', month:'short', day:'2-digit' });
+    return d.toLocaleDateString('en-GB', { year:'numeric', month:'short', day:'2-digit' });}
   };
   const toISODate = d => d ? new Date(d.getTime() - (d.getTimezoneOffset() * 60000)).toISOString().split("T")[0] : "";
   const getFormObj = form => Object.fromEntries(new FormData(form).entries());
@@ -315,9 +315,9 @@
   }
 
   // ======= WIRING =======
-  document.getElementById('request-form').addEventListener('submit', submitRequest);
-  document.getElementById('refresh-btn').addEventListener('click', renderLists);
-  document.getElementById('logout-btn').addEventListener('click', performSecureLogout);
+  var _rf=document.getElementById('request-form'); if(_rf){_rf.addEventListener('submit', submitRequest);}
+  var _rb=document.getElementById('refresh-btn'); if(_rb){_rb.addEventListener('click', renderLists);}
+  var _lb=document.getElementById('logout-btn'); if(_lb){_lb.addEventListener('click', performSecureLogout);}
 
   // Auto-calc expiry: default = same day 23:59 for demo
   const requestDateInput = document.querySelector('input[name="requestDate"]');
@@ -352,10 +352,10 @@
   document.getElementById('back-to-front-2').addEventListener('click', showFront);
 
   // Back button below the form = back to status list (front UX)
-  document.getElementById('back-btn').addEventListener('click', showFront);
+  var _bb=document.getElementById('back-btn'); if(_bb){_bb.addEventListener('click', showFront);}
 
   // Search & filter by vehicle number on the client after fetch
-  document.getElementById('search-btn').addEventListener('click', async () => {
+  var _sb=document.getElementById('search-btn'); if(_sb){_sb.addEventListener('click', async () => {
     await renderLists();
     const q = (document.getElementById('search-vehicle').value || '').toUpperCase().replace(/\s+/g,'');
     if(!q) return;
