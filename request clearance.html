@@ -1,0 +1,388 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Request Clearance — Standalone</title>
+  <!-- Tailwind via CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    @keyframes fade-in { from { opacity: 0; transform: translateY(4px);} to { opacity: 1; transform: translateY(0);} }
+    .animate-fade-in { animation: fade-in .25s ease-out both; }
+    .mobile-input { font-size: 16px; } /* iOS zoom fix */
+    .mobile-button { min-height: 44px; }
+    .mobile-vehicle-number { letter-spacing: 1px; }
+  </style>
+</head>
+<body class="bg-gray-100 text-gray-900 dark:bg-gray-900 dark:text-gray-100">
+  <main class="max-w-6xl mx-auto p-4 md:p-8">
+    <header class="flex items-center justify-between gap-4 mb-6">
+      <div class="flex items-center gap-3">
+        <div class="w-3.5 h-3.5 rounded-full bg-white ring-2 ring-gray-300" id="conn-dot" title="Connection status"></div>
+        <h1 class="text-2xl md:text-3xl font-bold"><span class="text-yellow-500">Request</span> Clearance</h1>
+      </div>
+      <div class="flex items-center gap-2">
+        <button id="logout-btn" class="px-3 py-2 rounded-lg bg-slate-700 text-slate-200 hover:bg-slate-600">Logout</button>
+      </div>
+    </header>
+
+    <!-- FRONT PAGE -->
+    <section id="front-page" class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-8">
+      <button id="go-new-request" class="p-6 rounded-xl bg-white dark:bg-gray-800 shadow hover:shadow-md text-left animate-fade-in">
+        <h2 class="text-xl font-semibold mb-2">New Clearance Request</h2>
+        <p class="text-slate-500 dark:text-slate-400">Submit a request for vehicle entry and get a status instantly.</p>
+      </button>
+      <button id="go-check-status" class="p-6 rounded-xl bg-white dark:bg-gray-800 shadow hover:shadow-md text-left animate-fade-in">
+        <h2 class="text-xl font-semibold mb-2">Check Request Status</h2>
+        <p class="text-slate-500 dark:text-slate-400">Look up your request by vehicle number & requested date.</p>
+      </button>
+    </section>
+
+    <!-- Request form card -->
+    <section id="request-section" class="hidden bg-white dark:bg-gray-800 rounded-xl shadow p-4 md:p-6 mb-8">
+      <div class="flex items-center justify-between">
+        <h2 class="text-xl font-semibold mb-4">New Clearance Request</h2>
+        <button id="back-to-front-1" class="text-sm px-3 py-1 rounded bg-slate-700 text-slate-200 hover:bg-slate-600">Back</button>
+      </div>
+      <form id="request-form" class="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div>
+          <label class="text-sm font-medium text-slate-700 dark:text-slate-300">Vehicle Number</label>
+          <input name="vehicleNumber" placeholder="e.g. ABC1234" class="mobile-input mt-1 w-full p-3 bg-slate-100 dark:bg-slate-900/70 border border-slate-300 dark:border-slate-700 rounded-lg" required/>
+        </div>
+        <div>
+          <label class="text-sm font-medium text-slate-700 dark:text-slate-300">Owner/Requester Name</label>
+          <input name="requesterName" class="mobile-input mt-1 w-full p-3 bg-slate-100 dark:bg-slate-900/70 border border-slate-300 dark:border-slate-700 rounded-lg" required/>
+        </div>
+        <div>
+          <label class="text-sm font-medium text-slate-700 dark:text-slate-300">Contact</label>
+          <input name="requesterContact" placeholder="+60..." class="mobile-input mt-1 w-full p-3 bg-slate-100 dark:bg-slate-900/70 border border-slate-300 dark:border-slate-700 rounded-lg" required/>
+        </div>
+        <div>
+          <label class="text-sm font-medium text-slate-700 dark:text-slate-300">Requested Date</label>
+          <input type="date" name="requestDate" class="mobile-input mt-1 w-full p-3 bg-slate-100 dark:bg-slate-900/70 border border-slate-300 dark:border-slate-700 rounded-lg" required/>
+        </div>
+        <div>
+          <label class="text-sm font-medium text-slate-700 dark:text-slate-300">Time Slot</label>
+          <select name="timeSlot" class="mobile-input mt-1 w-full p-3 bg-slate-100 dark:bg-slate-900/70 border border-slate-300 dark:border-slate-700 rounded-lg" required>
+            <option value="">Select…</option>
+            <option>08:00-10:00</option>
+            <option>10:00-12:00</option>
+            <option>12:00-14:00</option>
+            <option>14:00-16:00</option>
+            <option>16:00-18:00</option>
+            <option>18:00 onwards</option>
+          </select>
+        </div>
+        <div>
+          <label class="text-sm font-medium text-slate-700 dark:text-slate-300">Expiry Date</label>
+          <input type="date" id="request-expiry-date" name="expiryDate" class="mobile-input mt-1 w-full p-3 bg-slate-900/70 border border-slate-700 rounded-lg text-white bg-gray-700 cursor-not-allowed" required readonly />
+        </div>
+        <div class="md:col-span-2">
+          <label class="text-sm font-medium text-slate-700 dark:text-slate-300">Notes</label>
+          <textarea name="notes" rows="3" class="mobile-input mt-1 w-full p-3 bg-slate-100 dark:bg-slate-900/70 border border-slate-300 dark:border-slate-700 rounded-lg" placeholder="Purpose of entry"></textarea>
+        </div>
+        <p class="text-xs text-yellow-500 md:col-span-2">For same-day clearance, requests must be submitted before 14:00hrs local time.</p>
+        <div class="flex justify-between md:col-span-2 pt-2">
+          <button id="back-btn" type="button" class="px-6 py-2 rounded-lg bg-slate-700 text-slate-200 hover:bg-slate-600 mobile-button">Back</button>
+          <button type="submit" class="px-6 py-2 rounded-lg bg-blue-600 text-white hover:bg-blue-700 mobile-button">Submit</button>
+        </div>
+      </form>
+    </section>
+
+    <!-- Simple status check section -->
+    <section id="status-section" class="hidden mb-8">
+      <div class="bg-white dark:bg-gray-800 rounded-xl shadow p-4 md:p-6">
+        <div class="flex items-center justify-between">
+          <h2 class="text-xl font-semibold mb-4">Check Request Status</h2>
+          <button id="back-to-front-2" class="text-sm px-3 py-1 rounded bg-slate-700 text-slate-200 hover:bg-slate-600">Back</button>
+        </div>
+        <div class="grid grid-cols-1 md:grid-cols-[1fr_auto] gap-3 mb-4">
+          <input id="search-vehicle" class="p-3 rounded-lg bg-slate-100 dark:bg-slate-900/70 border border-slate-300 dark:border-slate-700" placeholder="Enter vehicle number (e.g., ABC1234)" />
+          <button id="search-btn" class="px-4 py-2 rounded-lg bg-slate-700 text-white hover:bg-slate-600">Search</button>
+        </div>
+        <div class="flex items-center gap-2 mb-3">
+          <span class="text-lg font-semibold">Pending Requests</span>
+          <span id="requests-count-badge" class="flex items-center justify-center min-w-[24px] h-6 px-2 text-xs font-bold text-white bg-red-500 rounded-full">0</span>
+        </div>
+        <div id="requests-list" class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4"></div>
+      </div>
+    </section>
+
+    <div id="modal-container"></div>
+  </main>
+
+  <!-- Firebase SDKs -->
+  <script src="https://www.gstatic.com/firebasejs/10.13.2/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.13.2/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.13.2/firebase-firestore-compat.js"></script>
+
+  <script>
+  // ======= CONFIG (use your existing values) =======
+  const firebaseConfig = {
+    apiKey: "YOUR_API_KEY",
+    authDomain: "YOUR_AUTH_DOMAIN",
+    projectId: "YOUR_PROJECT_ID",
+    storageBucket: "YOUR_STORAGE_BUCKET",
+    messagingSenderId: "YOUR_MSG_SENDER_ID",
+    appId: "YOUR_APP_ID"
+  };
+  // Collection names (kept same as existing system where possible)
+  const COLLECTION_REQUESTS = "requests";          // pending/approved/rejected, etc.
+  const COLLECTION_ACCESS_LOGS = "access_logs";
+
+  // ======= Init =======
+  const app = firebase.initializeApp(firebaseConfig);
+  const auth = firebase.auth();
+  const db = firebase.firestore();
+
+  // Connection dot (white -> green when Firestore round-trip succeeds)
+  async function pingConnection(){
+    const dot = document.getElementById('conn-dot');
+    try {
+      // Firestore ping: fetch one doc quickly (or noop query)
+      await db.collection(COLLECTION_REQUESTS).limit(1).get();
+      dot.classList.remove('bg-white');
+      dot.classList.add('bg-green-500');
+    } catch (e) {
+      dot.classList.remove('bg-green-500');
+      dot.classList.add('bg-white');
+    }
+  }
+
+  // ======= UTILITIES =======
+  const formatDate = (tsOrDate) => {
+    const d = tsOrDate instanceof Date ? tsOrDate : (tsOrDate && tsOrDate.toDate ? tsOrDate.toDate() : null);
+    if(!d) return "—";
+    return d.toLocaleDateString('en-GB', { year:'numeric', month:'short', day:'2-digit' });
+  };
+  const toISODate = d => d ? new Date(d.getTime() - (d.getTimezoneOffset() * 60000)).toISOString().split("T")[0] : "";
+  const getFormObj = form => Object.fromEntries(new FormData(form).entries());
+  const formatVehicleNumber = v => (v||'').toString().trim().toUpperCase().replace(/\\s+/g,'');
+  const showNotification = (message, type="success") => {
+    const notification = document.createElement("div");
+    const bgColor = type === "success" ? "bg-green-600" : type === "error" ? "bg-red-600" : "bg-blue-600";
+    notification.className = \`fixed bottom-5 right-5 p-4 rounded-lg shadow-lg text-white flex items-center animate-fade-in z-[100] \${bgColor} max-w-sm\`;
+    const icon = type === "success" ? "✓" : type === "error" ? "✗" : "ℹ";
+    notification.innerHTML = \`<span class="mr-3 text-lg">\${icon}</span><span>\${message}</span>\`;
+    document.body.appendChild(notification);
+    setTimeout(() => notification.remove(), 3500);
+  };
+
+  // Haversine helpers + geofence check (kept from your workflow)
+  const R = 6371e3;
+  const toRad = (x)=> x*Math.PI/180;
+  const calcDist = (a,b,c,d)=>{
+    const φ1=toRad(a), λ1=toRad(b), φ2=toRad(c), λ2=toRad(d);
+    const Δφ=φ2-φ1, Δλ=λ2-λ1;
+    const s = Math.sin(Δφ/2)**2 + Math.cos(φ1)*Math.cos(φ2)*Math.sin(Δλ/2)**2;
+    return 2*R*Math.atan2(Math.sqrt(s), Math.sqrt(1-s));
+  };
+  function checkLocationAccess(userLoc, allowed){
+    if(!userLoc || !allowed?.length) return {allowed:false, reason:"No geofences defined"};
+    for(const loc of allowed){
+      let eff = loc.radiusMeters||0;
+      if(userLoc.accuracy>50) eff+= userLoc.accuracy;
+      const d = calcDist(userLoc.latitude, userLoc.longitude, loc.latitude, loc.longitude);
+      if(d<=eff) return {allowed:true, nearest:loc, best:d};
+    }
+    // find nearest if not allowed
+    let nearest=null, best=Infinity;
+    for(const loc of allowed){
+      const d = calcDist(userLoc.latitude, userLoc.longitude, loc.latitude, loc.longitude);
+      if(d<best){best=d; nearest=loc;}
+    }
+    return {allowed:false, reason:"Outside permitted area", nearest, best};
+  }
+
+  async function logAccessAttempt(userId, userLoc, success, note){
+    try{
+      await db.collection(COLLECTION_ACCESS_LOGS).add({
+        userId: userId || "anonymous",
+        location: userLoc || null,
+        success: !!success,
+        note: note || "",
+        ts: firebase.firestore.FieldValue.serverTimestamp()
+      });
+    }catch(e){
+      console.warn("logAccessAttempt failed:", e);
+    }
+  }
+
+  // ======= RENDERERS =======
+  function formatApprovalHistory(clearance){
+    if(!clearance.approvalHistory?.length) return '';
+    return clearance.approvalHistory.map(entry=>{
+      const date = formatDate(entry.timestamp);
+      const time = entry.timestamp?.toDate?.().toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit',hour12:false}) || '—';
+      const actionText = entry.action ? (entry.action[0].toUpperCase()+entry.action.slice(1)) : 'Updated';
+      return \`\${actionText} by \${entry.byUsername||'—'} (\${entry.byDesignation||'—'}) on \${date} at \${time}hrs\`;
+    }).join('<br>');
+  }
+
+  const statusConfig = {
+    approved: { text: "APPROVED", color: "text-green-400", bg: "bg-green-500/10", border: "border-green-500/20" },
+    rejected: { text: "REJECTED", color: "text-red-400", bg: "bg-red-500/10", border: "border-red-500/20" },
+    pending:  { text: "PENDING",  color: "text-yellow-400", bg: "bg-yellow-500/10", border: "border-yellow-500/20" },
+    active:   { text: "ACTIVE CLEARANCE", color: "text-green-400", bg: "bg-green-500/10", border: "border-green-500/20" },
+    expired:  { text: "EXPIRED",  color: "text-gray-400", bg: "bg-gray-500/10", border: "border-gray-500/20" }
+  };
+
+  function createStatusCard(r){
+    const cfg = statusConfig[r.status] || statusConfig.pending;
+    const timeSlotText = r.timeSlot ? r.timeSlot.replace('-', ' to ').replace('onwards', ' onwards') : 'N/A';
+    const contact = r.requesterContact || r.ownerContact || 'N/A';
+    return `
+      <div class="p-4 ${cfg.bg} ${cfg.border} rounded-xl border text-left animate-fade-in">
+        <div class="flex justify-between items-start mb-3">
+          <div>
+            <p class="text-sm text-slate-400">Vehicle</p>
+            <p class="font-mono text-xl font-bold text-blue-400 mobile-vehicle-number">${formatVehicleNumber(r.vehicleNumber)}</p>
+            <p class="text-xs text-slate-400">${r.requesterName||'—'} • ${contact}</p>
+          </div>
+          <span class="text-xs font-semibold px-2 py-1 rounded ${cfg.color} ring-1 ring-inset ${cfg.border}">${cfg.text}</span>
+        </div>
+        <div class="grid grid-cols-2 gap-2 text-sm">
+          <div><span class="text-slate-400">Date</span><div class="font-medium">${formatDate(r.requestDate)}</div></div>
+          <div><span class="text-slate-400">Time</span><div class="font-medium">${timeSlotText}</div></div>
+          <div><span class="text-slate-400">Expiry</span><div class="font-medium">${formatDate(r.expiryDate)}</div></div>
+          <div><span class="text-slate-400">Notes</span><div class="font-medium">${r.notes || '—'}</div></div>
+          <div class="col-span-2"><span class="text-slate-400">History</span><div class="font-medium">${formatApprovalHistory(r)}</div></div>
+        </div>
+      </div>`;
+  }
+
+  // ======= DATA =======
+  async function fetchRequests(){
+    const snap = await db.collection(COLLECTION_REQUESTS).orderBy('createdAt','desc').limit(200).get();
+    return snap.docs.map(d=>({ id:d.id, ...d.data() }));
+  }
+
+  async function renderLists(){
+    const listEl = document.getElementById('requests-list');
+    const clrEl  = document.getElementById('clearance-list');
+    listEl.innerHTML = '<div class="text-sm text-slate-400">Loading…</div>';
+    clrEl.innerHTML  = '<div class="text-sm text-slate-400">Loading…</div>';
+
+    const rows = await fetchRequests();
+    document.getElementById('requests-count-badge').textContent = (rows.filter(r=> (r.status||'pending')==='pending')).length;
+
+    const pending = rows.filter(r=> (r.status||'pending')==='pending');
+    const active  = rows.filter(r=> ['approved','active','expired','rejected'].includes(r.status));
+
+    listEl.innerHTML = pending.length ? pending.map(createStatusCard).join('') : '<div class="text-sm text-slate-400">No pending requests.</div>';
+    clrEl.innerHTML  = active.length  ? active.map(createStatusCard).join('')  : '<div class="text-sm text-slate-400">No records.</div>';
+  }
+
+  async function submitRequest(ev){
+    ev.preventDefault();
+    const form = ev.currentTarget;
+    const obj = getFormObj(form);
+    obj.vehicleNumber = formatVehicleNumber(obj.vehicleNumber);
+    obj.requestDate   = obj.requestDate ? new Date(obj.requestDate) : null;
+    obj.expiryDate    = obj.expiryDate ? new Date(obj.expiryDate) : null;
+    obj.status        = 'pending';
+    obj.createdAt     = firebase.firestore.FieldValue.serverTimestamp();
+    try{
+      await db.collection(COLLECTION_REQUESTS).add(obj);
+      showNotification("Request submitted");
+      form.reset();
+      // Keep expiry date read-only blank
+      document.getElementById('request-expiry-date').value = '';
+      renderLists();
+    }catch(e){
+      console.error(e);
+      showNotification("Failed to submit ("+e.message+")","error");
+    }
+  }
+
+  // ======= SESSION =======
+  async function performSecureLogout(){
+    try{
+      const currentUserID = sessionStorage.getItem('currentUserID');
+      if(currentUserID){ await logAccessAttempt(currentUserID, null, true, "User logged out"); }
+      sessionStorage.removeItem('isDashboardLogin');
+      sessionStorage.removeItem('currentUserID');
+      sessionStorage.removeItem('accessLocation');
+      await auth.signOut();
+      showNotification("Logged out successfully");
+    }catch(e){
+      console.error("Logout error", e);
+      showNotification("Logout completed","success");
+    }
+  }
+  function isValidSecureSession(){
+    return sessionStorage.getItem('isDashboardLogin')==='true' && sessionStorage.getItem('currentUserID')!==null;
+  }
+
+  // ======= WIRING =======
+  document.getElementById('request-form').addEventListener('submit', submitRequest);
+  document.getElementById('refresh-btn').addEventListener('click', renderLists);
+  document.getElementById('logout-btn').addEventListener('click', performSecureLogout);
+
+  // Auto-calc expiry: default = same day 23:59 for demo
+  const requestDateInput = document.querySelector('input[name="requestDate"]');
+  const expiryInput = document.getElementById('request-expiry-date');
+  requestDateInput.addEventListener('change', () => {
+    const d = new Date(requestDateInput.value);
+    if(isNaN(d)) { expiryInput.value=''; return; }
+    expiryInput.value = toISODate(d);
+  });
+
+
+  // --- Front page navigation ---
+  function showFront(){ 
+    document.getElementById('front-page').classList.remove('hidden');
+    document.getElementById('request-section').classList.add('hidden');
+    document.getElementById('status-section').classList.add('hidden');
+  }
+  function showRequest(){ 
+    document.getElementById('front-page').classList.add('hidden');
+    document.getElementById('request-section').classList.remove('hidden');
+    document.getElementById('status-section').classList.add('hidden');
+  }
+  function showStatus(){ 
+    document.getElementById('front-page').classList.add('hidden');
+    document.getElementById('request-section').classList.add('hidden');
+    document.getElementById('status-section').classList.remove('hidden');
+  }
+
+  document.getElementById('go-new-request').addEventListener('click', showRequest);
+  document.getElementById('go-check-status').addEventListener('click', showStatus);
+  document.getElementById('back-to-front-1').addEventListener('click', showFront);
+  document.getElementById('back-to-front-2').addEventListener('click', showFront);
+
+  // Back button below the form = back to status list (front UX)
+  document.getElementById('back-btn').addEventListener('click', showFront);
+
+  // Search & filter by vehicle number on the client after fetch
+  document.getElementById('search-btn').addEventListener('click', async () => {
+    await renderLists();
+    const q = (document.getElementById('search-vehicle').value || '').toUpperCase().replace(/\s+/g,'');
+    if(!q) return;
+    const cards = Array.from(document.querySelectorAll('#requests-list > div'));
+    let shown = 0;
+    for(const c of cards){
+      const has = c.innerText.toUpperCase().includes(q);
+      c.style.display = has ? '' : 'none';
+      if(has) shown++;
+    }
+    // Count badge shows how many visible (pending) after filter
+    document.getElementById('requests-count-badge').textContent = String(shown);
+  });
+
+
+  // Initial load
+  (async function init(){
+    await pingConnection();
+    if(!isValidSecureSession()){
+      // Optional: enforce that this is launched from your main system
+      sessionStorage.setItem('isDashboardLogin','true'); // allow standalone demo
+      sessionStorage.setItem('currentUserID','standalone-demo');
+    }
+    renderLists();
+    // Re-ping periodically
+    setInterval(pingConnection, 15000);
+  })();
+  </script>
+</body>
+</html>
